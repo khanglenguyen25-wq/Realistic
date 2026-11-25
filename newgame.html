@@ -1,450 +1,417 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BODYCAM // PHOTOREALISTIC FOOTAGE</title>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;}
-    body,html{width:100%;height:100%;overflow:hidden;background:#050608;color:#e5e7eb;font-family:'Courier New',Consolas,monospace;}
-    #game-wrap{position:fixed;inset:0;z-index:1;}
-    .hidden{display:none!important;}
-    #cam-hud{position:fixed;inset:0;z-index:10;pointer-events:none;padding:24px 32px;display:flex;flex-direction:column;justify-content:space-between;text-shadow:0 1px 4px #000;}
-    .cam-top{display:flex;justify-content:space-between;align-items:flex-start;}
-    .rec-badge{display:flex;align-items:center;gap:9px;font-weight:900;font-size:16px;letter-spacing:2px;}
-    .rec-dot{width:13px;height:13px;border-radius:50%;background:#ef4444;box-shadow:0 0 10px #ef4444;animation:blink 1s infinite;}
-    @keyframes blink{0%,49%{opacity:1;}50%,100%{opacity:0.15;}}
-    .axon-box{text-align:right;font-size:13px;line-height:1.45;color:#e5e7eb;background:rgba(0,0,0,0.35);padding:6px 11px;border-right:3px solid #eab308;}
-    .menu-bg{position:fixed;inset:0;z-index:20;background:radial-gradient(circle at center,rgba(14,18,24,0.82),rgba(4,5,7,0.95));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:20px;}
-    .title{font-size:54px;font-weight:900;letter-spacing:12px;color:#f3f4f6;}
-    .subtitle{font-size:12px;letter-spacing:4px;color:#9ca3af;margin-top:-12px;}
-    .map-row{display:flex;gap:12px;margin:6px 0;}
-    .map-btn{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.22);color:#e5e7eb;padding:12px 20px;cursor:pointer;font-family:inherit;font-size:13px;transition:0.15s;}
-    .map-btn.active{border-color:#ef4444;background:rgba(239,68,68,0.22);color:#fff;}
-    .start-btn{background:#dc2626;color:#fff;border:none;padding:14px 44px;font-size:16px;font-weight:900;letter-spacing:4px;cursor:pointer;font-family:inherit;transition:0.15s;}
-    .start-btn:hover{background:#ef4444;box-shadow:0 0 22px rgba(239,68,68,0.5);}
-    .guide-box{max-width:580px;font-size:12px;color:#aeb6c2;line-height:1.8;background:rgba(0,0,0,0.55);padding:12px 18px;border:1px solid rgba(255,255,255,0.12);}
-    .guide-box b{color:#fff;}
-  </style>
-</head>
-<body>
-  <div id="game-wrap"></div>
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>FIELD CAM · FPS phong cách bodycam (nguyên mẫu)</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#000;font-family:'Courier New',monospace;color:#fff;}
+#c{width:100%;height:100%;display:block;outline:none;touch-action:none;}
+.o{position:fixed;pointer-events:none;text-shadow:0 0 3px #000,0 0 7px #000;font-weight:700;letter-spacing:1px;font-size:15px;}
+#rec{left:22px;top:18px;font-size:18px;}
+#rec i{display:inline-block;width:12px;height:12px;border-radius:50%;background:#e11;margin-right:8px;animation:bl 1s steps(2) infinite;}
+@keyframes bl{50%{opacity:0}}
+#time{left:22px;top:46px;font-size:14px;opacity:.92;}
+#unit{right:22px;top:18px;text-align:right;}
+#bat{right:22px;top:44px;font-size:13px;opacity:.9;}
+#gps{left:22px;bottom:18px;font-size:12px;opacity:.8;}
+#ammo{right:22px;bottom:18px;font-size:22px;text-align:right;}
+#kills{left:50%;top:18px;transform:translateX(-50%);font-size:13px;opacity:.85;}
+#msg{left:50%;bottom:16%;transform:translateX(-50%);font-size:18px;letter-spacing:5px;opacity:0;transition:opacity .25s;text-align:center;}
+#start,#dead{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:16px;}
+#start{background:rgba(0,0,0,.84);cursor:pointer;font-weight:700;letter-spacing:4px;}
+#start small{font-size:12px;letter-spacing:2px;opacity:.8;line-height:1.8;}
+#dead{display:none;background:rgba(40,0,0,.55);font-weight:900;letter-spacing:8px;font-size:30px;cursor:pointer;}
+#dead small{font-size:12px;letter-spacing:3px;opacity:.85;}
+body.lobby .o,body.lobby #dead,body.lobby #start{display:none!important;}
+body:not(.lobby) #lui{display:none;}
+#lui{position:fixed;inset:0;pointer-events:none;font-family:'Arial Rounded MT Bold',Arial,sans-serif;}
+#ltitle{position:absolute;left:22px;top:16px;font-size:26px;font-weight:900;letter-spacing:3px;color:#fff;text-shadow:0 3px 0 #0a3d99,0 0 12px rgba(0,0,0,.35);}
+#lhint{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:rgba(8,30,80,.62);color:#fff;font-weight:800;padding:10px 20px;border-radius:999px;font-size:14px;letter-spacing:1px;text-align:center;border:2px solid rgba(255,255,255,.35);}
+#lbarw{height:6px;background:rgba(255,255,255,.25);border-radius:6px;margin-top:7px;overflow:hidden;}#lbar{height:100%;width:0;background:#ffd400;}
+#ltoast{position:absolute;left:50%;top:14%;transform:translateX(-50%);background:#ffd400;color:#222;font-weight:900;padding:10px 22px;border-radius:14px;opacity:0;transition:opacity .25s;letter-spacing:2px;}
+#lpanel{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,20,60,.45);pointer-events:auto;}
+#lpanel .card{width:min(560px,92vw);background:#143a7a;border:4px solid #fff;border-radius:22px;padding:18px;color:#fff;box-shadow:0 10px 0 rgba(0,0,0,.25);}
+#lpanel h2{margin:0 0 12px;letter-spacing:3px;text-align:center;}
+#lpanel .mp{background:#1f55b0;border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;border:3px solid transparent;}
+#lpanel .mp.sel{border-color:#ffd400;}#lpanel .mp.lock{opacity:.5;}#lpanel .mp span{font-size:12px;opacity:.85;}
+#lpanel .btns{display:flex;gap:10px;margin-top:12px;}#lpanel button{flex:1;padding:13px;border-radius:14px;border:0;font-weight:900;letter-spacing:2px;font-size:15px;cursor:pointer;background:#e8eefc;color:#143a7a;}#lpanel button.go{background:#ffd400;color:#222;flex:2;}
+#tolobby{margin-top:14px;padding:11px 26px;border-radius:12px;border:0;background:#ffd400;color:#222;font-weight:900;letter-spacing:3px;cursor:pointer;font-family:inherit;}
+</style>
+<script>
+try{const g=navigator.getGamepads;navigator.getGamepads=function(){try{return g.call(navigator);}catch(e){return [];}};}catch(e){}
+function loadJS(srcs,ok,fail){let i=0;(function n(){if(i>=srcs.length){if(fail)fail();return;}const s=document.createElement('script');s.crossOrigin='anonymous';s.src=srcs[i++];s.onload=ok;s.onerror=()=>{s.remove();n();};document.head.appendChild(s);})();}
+function showErr(e){console.error(e);document.body.classList.remove('lobby');const st=document.getElementById('start');if(!st)return;st.style.display='flex';st.onclick=null;st.innerHTML='<div style="font-size:20px">LỖI KHI KHỞI TẠO</div><small style="white-space:pre-wrap;max-width:90vw;text-align:left">'+String((e&&(e.stack||e.message))||e).replace(/</g,'&lt;')+'</small>';}
+addEventListener('error',ev=>showErr(ev.error||ev.message));
+</script>
+</head><body class="lobby">
+<canvas id="c"></canvas>
+<div class="o" id="rec"><i></i>REC <span id="elapsed">00:00:00</span></div>
+<div class="o" id="time"></div><div class="o" id="unit">UNIT-07 · CAM A1</div><div class="o" id="bat">BAT ▮▮▮▯ 76%</div>
+<div class="o" id="kills"></div><div class="o" id="gps">N 10.7769° E 106.7009°</div><div class="o" id="ammo"></div><div class="o" id="msg"></div>
+<div id="lui"><div id="ltitle">SẢNH CHỜ</div>
+<div id="lhint"><span id="lhtxt">WASD hoặc phím mũi tên để di chuyển · Bước vào vòng tròn để chọn</span><div id="lbarw"><div id="lbar"></div></div></div><div id="ltoast"></div>
+<div id="lpanel"><div class="card"><h2>CHỌN CHIẾN TRƯỜNG</h2>
+<div class="mp sel"><b>KHU NHÀ · CQB</b><span>Đang có · 6 mục tiêu</span></div><div class="mp lock"><b>XƯỞNG BỎ HOANG</b><span>Sắp có</span></div><div class="mp lock"><b>HẦM NGẦM</b><span>Sắp có</span></div>
+<div class="btns"><button id="lclose">ĐÓNG</button><button id="lstart" class="go">BẮT ĐẦU NHIỆM VỤ</button></div></div></div></div>
+<div id="dead"><div>SIGNAL LOST</div><small>BẤM CHUỘT HOẶC ENTER ĐỂ LÀM LẠI</small></div>
+<div id="start"><div id="stitle" style="font-size:26px">FIELD OPS</div><div>BẤM ĐỂ VÀO NHIỆM VỤ</div>
+<small>WASD di chuyển · Shift chạy (không bắn được) · Chuột bắn · Chuột phải ngắm<br>R nạp đạn (có thể bị rơi đạn) · F đèn pin · Esc tạm dừng · Enter làm lại<br>Hạ gục toàn bộ mục tiêu trong khu nhà. Bị bắn trúng vài phát là chết.</small><button id="tolobby">VỀ SẢNH</button></div>
+<script>
+function buildLobby(engine,LOW,onEnter){
+const scene=new BABYLON.Scene(engine);scene.clearColor=new BABYLON.Color4(.02,.4,1,1);
+const hemi=new BABYLON.HemisphericLight('lh',new BABYLON.Vector3(0,1,0),scene);hemi.intensity=.9;hemi.groundColor=new BABYLON.Color3(.5,.6,.75);
+const sun=new BABYLON.DirectionalLight('ls',new BABYLON.Vector3(-.6,-1,.5),scene);sun.position=new BABYLON.Vector3(30,70,-30);sun.intensity=.85;sun.autoCalcShadowZBounds=true;
+const sg=new BABYLON.ShadowGenerator(LOW?1024:2048,sun);sg.usePercentageCloserFiltering=true;sg.darkness=.4;
+if(!LOW){const gl=new BABYLON.GlowLayer('lgl',scene);gl.intensity=.7;}
+const $=id=>document.getElementById(id);
+const dyn=(w,h,f,alpha)=>{const t=new BABYLON.DynamicTexture('t',{width:w,height:h},scene,true);if(alpha)t.hasAlpha=true;const g=t.getContext();f(g);t.update();t.anisotropicFilteringLevel=8;return t;};
+const mat=(c,em)=>{const m=new BABYLON.StandardMaterial('m',scene);m.diffuseColor=BABYLON.Color3.FromHexString(c);m.specularColor=new BABYLON.Color3(.1,.1,.1);if(em)m.emissiveColor=BABYLON.Color3.FromHexString(em);return m;};
+const box=(w,h,d,x,y,z,m,cast=true)=>{const b=BABYLON.MeshBuilder.CreateBox('b',{width:w,height:h,depth:d},scene);b.position.set(x,y,z);b.material=m;if(cast)sg.addShadowCaster(b);b.receiveShadows=true;b.isPickable=false;return b;};
+const cyl=(d,h,x,y,z,m,cast=true)=>{const c=BABYLON.MeshBuilder.CreateCylinder('c',{diameter:d,height:h,tessellation:18},scene);c.position.set(x,y,z);c.material=m;if(cast)sg.addShadowCaster(c);c.receiveShadows=true;c.isPickable=false;return c;};
+const textPlane=(lines,w,h,wp,hp,bb)=>{const t=dyn(w,h,g=>{g.textAlign='center';g.textBaseline='middle';lines.forEach(l=>{g.font=l.f;g.lineWidth=l.sw||7;g.lineJoin='round';g.strokeStyle='#0a1a3a';g.strokeText(l.t,w/2,l.y);g.fillStyle=l.c;g.fillText(l.t,w/2,l.y);});},true);
+  const p=BABYLON.MeshBuilder.CreatePlane('tp',{width:wp,height:hp},scene),m=new BABYLON.StandardMaterial('tm',scene);m.diffuseTexture=t;m.useAlphaFromDiffuseTexture=true;m.emissiveColor=new BABYLON.Color3(1,1,1);m.disableLighting=true;m.backFaceCulling=false;p.material=m;if(bb)p.billboardMode=BABYLON.Mesh.BILLBOARDMODE_ALL;p.isPickable=false;return p;};
 
-  <!-- THUẦN TÚY CAMERA AXON (ZERO GAME HUD) -->
-  <div id="cam-hud" class="hidden">
-    <div class="cam-top">
-      <div>
-        <div class="rec-badge"><div class="rec-dot"></div> REC</div>
-        <div style="font-size:11px;color:#cbd5e1;margin-top:3px;letter-spacing:1.5px;">AXON BODY 4™ // REALISM FEED</div>
-      </div>
-      <div class="axon-box">
-        <div><b>UNIT-07</b> // ACTIVE</div>
-        <div id="hud-clock">2026-11-24 18:15:00</div>
-        <div style="font-size:11px;color:#9ca3af;">BAT 88% • 1080P 60FPS</div>
-      </div>
-    </div>
-    <div></div>
-  </div>
+// ----- nền boong tàu -----
+const floorTex=dyn(512,512,g=>{g.fillStyle='#7f98b0';g.fillRect(0,0,512,512);for(let i=0;i<90;i++){const x=(i*97)%512,y=(i*61)%512,r=24+(i*29)%50,gr=g.createRadialGradient(x,y,2,x,y,r);gr.addColorStop(0,i%2?'rgba(255,255,255,.10)':'rgba(0,0,0,.08)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(x-r,y-r,r*2,r*2);}g.strokeStyle='#4a5f77';g.lineWidth=5;g.strokeRect(0,0,512,512);});
+floorTex.uScale=60/6;floorTex.vScale=56/6;
+const ground=BABYLON.MeshBuilder.CreateGround('lg',{width:60,height:56},scene),gm=new BABYLON.StandardMaterial('gm',scene);gm.diffuseTexture=floorTex;gm.specularColor=new BABYLON.Color3(.05,.05,.05);ground.material=gm;ground.position.z=2;ground.receiveShadows=true;ground.isPickable=false;
+box(62,1.6,58,0,-.85,2,mat('#51657d'),false);
+const ym=mat('#ffd400','#c9a400');
+[28.4,-28.4].forEach(x=>box(.3,.03,53.6,x,.04,2,ym,false));[-24.4,28.4].forEach(z=>box(56.8,.03,.3,0,.04,z,ym,false));
+const post=BABYLON.MeshBuilder.CreateCylinder('post',{diameter:.18,height:1.2},scene);post.material=mat('#3b6fe0');post.isVisible=false;
+for(let x=-30;x<=30;x+=4)[-26.2,30.2].forEach(z=>{const p=post.createInstance('p');p.position.set(x,.6,z);});
+for(let z=-26;z<=30;z+=4)[-30.2,30.2].forEach(x=>{const p=post.createInstance('p');p.position.set(x,.6,z);});
+const railM=mat('#5c8cff');[-26.2,30.2].forEach(z=>box(60.6,.12,.12,0,1.1,z,railM,false));[-30.2,30.2].forEach(x=>box(.12,.12,56.6,x,1.1,2,railM,false));
 
-  <div id="menu-screen" class="menu-bg">
-    <div class="title">BODYCAM</div>
-    <div class="subtitle">FISHEYE SHADER • PBR WET CONCRETE • ZERO HUD</div>
-    <div class="map-row">
-      <button class="map-btn active" data-map="warehouse"><b>ABANDONED WAREHOUSE</b><br><span style="font-size:10px;color:#9ca3af;">Nhà kho đổ nát, vũng nước &amp; tia nắng</span></button>
-      <button class="map-btn" data-map="bunker"><b>RUINED FACTORY</b><br><span style="font-size:10px;color:#9ca3af;">Xưởng công nghiệp &amp; hành lang hẹp</span></button>
-    </div>
-    <button class="start-btn" id="btn-play">BẮT ĐẦU TUẦN TRA</button>
-    <div class="guide-box">
-      <b>CHÂN THỰC 100%:</b> Không hiện máu, tình trạng hay số đạn.<br>
-      <b>Chấm Laser Đỏ [L]</b> hoặc <b>Giữ Chuột Phải</b> để ngắm • <b>[F]</b> Đèn pin chiến thuật<br>
-      <b>Q / E</b> Nghiêng kê góc • <b>1 / 2</b> Đổi súng • <b>R</b> Nạp đạn (khi nghe tiếng tạch)<br>
-      <b>WASD</b> Đi • <b>SHIFT</b> Chạy • <b>CTRL / C</b> Ngồi • <b>SPACE</b> Nhảy
-    </div>
-  </div>
+// ----- bệ trực thăng chữ H -----
+const hTex=dyn(512,512,g=>{g.fillStyle='#a9c1cc';g.fillRect(0,0,512,512);for(let i=0;i<60;i++){const x=(i*83)%512,y=(i*47)%512,r=20+(i*31)%40,gr=g.createRadialGradient(x,y,2,x,y,r);gr.addColorStop(0,'rgba(255,255,255,.18)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(x-r,y-r,r*2,r*2);}
+  g.setLineDash([28,18]);g.lineWidth=9;g.strokeStyle='#fff';g.strokeRect(26,26,460,460);g.setLineDash([]);g.strokeStyle='#ffd400';g.lineWidth=20;g.beginPath();g.arc(256,256,172,0,6.283);g.stroke();
+  g.fillStyle='#fff';g.font='900 290px Arial Black, Arial';g.textAlign='center';g.textBaseline='middle';g.fillText('H',256,268);});
+const hp=BABYLON.MeshBuilder.CreateGround('hp',{width:12,height:12},scene),hm=new BABYLON.StandardMaterial('hm',scene);hm.diffuseTexture=hTex;hm.emissiveColor=new BABYLON.Color3(.22,.3,.3);hm.specularColor=new BABYLON.Color3(.05,.05,.05);hp.material=hm;hp.position.y=.03;hp.receiveShadows=true;hp.isPickable=false;
+const gm2=mat('#3dffd8','#3dffd8');[6,-6].forEach(v=>{box(12.4,.05,.25,0,.06,v,gm2,false);box(.25,.05,12.4,v,.06,0,gm2,false);});
 
-  <div id="pause-screen" class="menu-bg hidden">
-    <div style="font-size:32px;font-weight:900;letter-spacing:6px;">FOOTAGE PAUSED</div>
-    <div style="display:flex;gap:12px;"><button class="start-btn" id="btn-resume">TIẾP TỤC</button><button class="map-btn" id="btn-menu">MENU</button></div>
-  </div>
+// ----- 3 vòng tròn chọn chế độ -----
+const starPath=(g,cx,cy,R,r)=>{g.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rad=i%2?r:R;g.lineTo(cx+Math.cos(a)*rad,cy+Math.sin(a)*rad);}g.closePath();};
+const pads=[];
+function makePad(id,name,sub,x,z,color,icon,fire){
+  const tex=dyn(512,512,g=>{g.fillStyle='rgba(8,20,45,.6)';g.beginPath();g.arc(256,256,240,0,6.283);g.fill();g.strokeStyle=color;g.lineWidth=18;g.beginPath();g.arc(256,256,226,0,6.283);g.stroke();
+    g.setLineDash([24,16]);g.lineWidth=9;g.strokeStyle='#fff';g.beginPath();g.arc(256,256,188,0,6.283);g.stroke();g.setLineDash([]);icon(g,color);},true);
+  const d=BABYLON.MeshBuilder.CreateDisc('pad',{radius:4,tessellation:48},scene),m=new BABYLON.StandardMaterial('pm',scene);d.rotation.x=Math.PI/2;d.position.set(x,.07,z);
+  m.diffuseTexture=tex;m.emissiveTexture=tex;m.useAlphaFromDiffuseTexture=true;m.disableLighting=true;m.backFaceCulling=false;d.material=m;d.isPickable=false;
+  const lb=textPlane([{t:name,f:'900 72px Arial',c:'#fff',y:78},{t:sub,f:'800 34px Arial',c:color,y:150,sw:6}],640,210,9,2.95,true);lb.position.set(x,3.6,z);
+  pads.push({id,name,x,z,r:4,mesh:d,t:0,cool:false,fire});}
+makePad('mp','MULTIPLAYER','SẮP CÓ',-15,16,'#4db8ff',(g,c)=>{g.fillStyle='#eaf6ff';starPath(g,256,262,120,50);g.fill();},()=>toast('MULTIPLAYER ĐANG PHÁT TRIỂN'));
+makePad('bf','CHỌN CHIẾN TRƯỜNG','BƯỚC VÀO VÒNG TRÒN',0,20,'#ffb300',(g,c)=>{g.strokeStyle=c;g.lineWidth=14;g.beginPath();g.arc(256,256,100,0,6.283);g.stroke();g.beginPath();g.moveTo(256,120);g.lineTo(256,392);g.moveTo(120,256);g.lineTo(392,256);g.stroke();},()=>openPanel());
+makePad('zb','ZOMBIE SIEGE','BƯỚC VÀO VÒNG TRÒN',15,15,'#7dff2a',(g,c)=>{g.fillStyle=c;g.font='900 230px Arial Black, Arial';g.textAlign='center';g.textBaseline='middle';g.fillText('Z',256,268);},()=>onEnter('zombie'));
+const wm=mat('#ffffff','#dfe9ff');
+function dash(x0,z0,x1,z1){const d=Math.hypot(x1-x0,z1-z0),n=Math.floor(d/1.6),a=-Math.atan2(z1-z0,x1-x0);for(let i=0;i<=n;i++){const t=i/n,b=box(.8,.03,.2,x0+(x1-x0)*t,.05,z0+(z1-z0)*t,wm,false);b.rotation.y=a;}}
+dash(-4.5,6.4,-12,13.2);dash(0,6.4,0,17);dash(4.5,6.4,12,12.4);
 
-  <div id="end-screen" class="menu-bg hidden">
-    <div style="font-size:44px;font-weight:900;letter-spacing:6px;color:#ef4444;">SIGNAL LOST</div>
-    <div id="end-sub" style="font-size:14px;color:#9ca3af;">OFFICER DOWN — FOOTAGE ARCHIVED</div>
-    <div style="display:flex;gap:12px;margin-top:10px;"><button class="start-btn" id="btn-retry">QUAY LẠI</button><button class="map-btn" id="btn-end-menu">MENU</button></div>
-  </div>
+// ----- bảng thông tin / cổng xanh -----
+const blue=mat('#2f6fe0'),green=mat('#1f5a34'),dkscr=mat('#101820');
+function arch(x,z,ry,title,l1,l2,dark){const g=new BABYLON.TransformNode('arch',scene);g.position.set(x,0,z);g.rotation.y=ry;
+  const add=m=>{m.parent=g;return m;};
+  [-3.7,3.7].forEach(px=>{const p=cyl(.4,5.4,px,2.7,0,blue);p.parent=g;});
+  const top=box(8.2,.6,.7,0,5.4,0,blue);top.parent=g;
+  const sc=box(6.8,3.7,.3,0,2.9,0,dark?dkscr:green);sc.parent=g;
+  const em=cyl(1.3,.25,0,6.1,0,mat('#e6c200','#7a6a00'));em.rotation.x=Math.PI/2;em.parent=g;
+  const t=textPlane([{t:title,f:'900 86px Arial',c:'#ffe14d',y:120},{t:l1,f:'800 52px Arial',c:'#e9fff0',y:260},{t:l2,f:'800 52px Arial',c:'#9be8b0',y:350}],1024,512,6.4,3.2,false);t.parent=g;t.position.set(0,2.9,-.2);}
+arch(-12,28.4,0,'ĐỘI HÌNH','Chưa có đội','Mời bạn bè sắp có',false);arch(12,28.4,0,'BẢNG VÀNG','Hạ gục nhiều nhất','Sắp có',false);
+arch(-27.6,5,Math.PI/2,'NHIỆM VỤ','Hôm nay: 0/3','Sắp có',true);arch(-27.6,-6,Math.PI/2,'KHO SÚNG','Sắp có','',true);
 
-  <script>
-    (() => {
-      'use strict';
+// ----- đồ trang trí -----
+const sand=mat('#d8c08a'),olive=mat('#4a8a3a'),olive2=mat('#2e5a24'),crateM=mat('#5b7a3a'),yel=mat('#e2b400');
+function sandRing(x,z){for(let i=0;i<10;i++){const a=i/10*6.283,b=box(1,.5,.55,x+Math.cos(a)*1.4,.25,z+Math.sin(a)*1.4,sand);b.rotation.y=-a+Math.PI/2;}}
+function barrel(x,z){cyl(.85,1.05,x,.52,z,olive);cyl(.7,.06,x,1.07,z,olive2);}
+function crate(x,z,s,r){const c=box(s,s*.8,s,x,s*.4,z,crateM);c.rotation.y=r;const st=box(s*1.02,s*.12,s*1.02,x,s*.45,z,yel);st.rotation.y=r;}
+[[-24,-19],[-9,-22],[3,-22],[14,-22],[24,-20],[26,-9],[26,-13],[-26,-12],[26,4]].forEach(p=>sandRing(p[0],p[1]));
+[[-26,-6],[-27,-15],[27,-16],[27,-3],[-20,-23],[8,-23],[20,-24],[27,9],[27,22],[-27,22]].forEach(p=>barrel(p[0],p[1]));
+[[-23,-14,1.6,.3],[24,-13,1.4,.6],[22,-6,1.2,1.2],[-14,-24,1.5,.2],[28,16,1.5,.5],[-28,14,1.4,.9],[-8,-14,1.0,.4]].forEach(p=>crate(p[0],p[1],p[2],p[3]));
+cyl(.14,9,26.5,4.5,8,mat('#9aa7b5'));box(3.2,.09,.09,26.5,6.6,8,mat('#9aa7b5'),false);box(2.2,.09,.09,26.5,7.9,8,mat('#9aa7b5'),false);
 
-      /* 1. WEB AUDIO CHÂN THỰC */
-      class TactAudio {
-        constructor(){this.ctx=null;this.nb=null;}
-        init(){if(!this.ctx){this.ctx=new(window.AudioContext||window.webkitAudioContext)();this.nb=this.ctx.createBuffer(1,this.ctx.sampleRate*0.6,this.ctx.sampleRate);const d=this.nb.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}if(this.ctx.state==='suspended')this.ctx.resume();}
-        tone(f1,f2,dur,type='sine',g=0.14,delay=0){this.init();const t=this.ctx.currentTime+delay,o=this.ctx.createOscillator(),gn=this.ctx.createGain();o.type=type;o.frequency.setValueAtTime(f1,t);o.frequency.exponentialRampToValueAtTime(Math.max(20,f2),t+dur);gn.gain.setValueAtTime(g,t);gn.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(gn);gn.connect(this.ctx.destination);o.start(t);o.stop(t+dur);}
-        gunshot(isPistol,dist=0){
-          this.init();const t=this.ctx.currentTime,v=Math.max(0.06,1-dist/55),n=this.ctx.createBufferSource();n.buffer=this.nb;
-          const f=this.ctx.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(isPistol?2900:3600,t);f.frequency.exponentialRampToValueAtTime(340,t+0.45);
-          const g=this.ctx.createGain();g.gain.setValueAtTime((isPistol?0.55:0.74)*v,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.48);
-          n.connect(f);f.connect(g);g.connect(this.ctx.destination);n.start(t);n.stop(t+0.5);
-          this.tone(isPistol?175:145,30,0.14,'triangle',0.52*v);
-          if(dist===0){this.tone(3700,3300,0.03,'sine',0.035,0.28);this.tone(3900,3500,0.025,'sine',0.025,0.37);}
-        }
-        dryFire(){this.tone(1850,900,0.025,'square',0.12);}
-        reloadSound(){this.tone(420,240,0.08,'square',0.09,0);this.tone(520,760,0.08,'square',0.1,0.65);this.tone(680,420,0.09,'sawtooth',0.08,1.15);}
-        heartbeat(){this.tone(58,32,0.12,'sine',0.28,0);this.tone(52,28,0.14,'sine',0.2,0.18);}
-        radioSquelch(){this.init();const t=this.ctx.currentTime,n=this.ctx.createBufferSource();n.buffer=this.nb;const f=this.ctx.createBiquadFilter();f.type='bandpass';f.frequency.value=1800;f.Q.value=2;const g=this.ctx.createGain();g.gain.setValueAtTime(0.14,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.14);n.connect(f);f.connect(g);g.connect(this.ctx.destination);n.start(t);n.stop(t+0.15);this.tone(1100,950,0.06,'sine',0.08,0.04);}
-      }
-      const sfx=new TactAudio();
+// ----- nhân vật (kiểu khối) -----
+const av=new BABYLON.TransformNode('av',scene),skin=mat('#ffd24d'),shirt=mat('#d9531e'),pants=mat('#2d6a4f'),dark=mat('#111');
+const part=(w,h,d,x,y,z,m,par)=>{const b=BABYLON.MeshBuilder.CreateBox('a',{width:w,height:h,depth:d},scene);b.parent=par||av;b.position.set(x,y,z);b.material=m;sg.addShadowCaster(b);b.isPickable=false;return b;};
+part(.95,1.05,.5,0,1.5,0,shirt);const head=BABYLON.MeshBuilder.CreateSphere('hd',{diameter:.85,segments:10},scene);head.parent=av;head.position.y=2.4;head.material=skin;sg.addShadowCaster(head);
+part(.14,.14,.05,-.17,2.45,.4,dark);part(.14,.14,.05,.17,2.45,.4,dark);part(.3,.06,.05,0,2.22,.4,dark);
+const mk=(x,y,m,w,h)=>{const n=new BABYLON.TransformNode('j',scene);n.parent=av;n.position.set(x,y,0);part(w,h,w,0,-h/2,0,m,n);return n;};
+const armL=mk(-.65,1.95,skin,.32,.95),armR=mk(.65,1.95,skin,.32,.95),legL=mk(-.24,1.0,pants,.42,1),legR=mk(.24,1.0,pants,.42,1);
+const nm=textPlane([{t:'BẠN',f:'900 80px Arial',c:'#fff',y:60}],256,120,2,.95,true);nm.position.y=3.5;nm.parent=av;
+const AP=av.position;AP.set(0,0,-5);
+const cam=new BABYLON.FreeCamera('lc',new BABYLON.Vector3(0,23,-24),scene);cam.fov=.9;cam.minZ=.5;cam.maxZ=300;
 
-      /* 2. RENDERER + PMREM ENVIRONMENT + SHADER ỐNG KÍNH FISHEYE BODYCAM */
-      const scene=new THREE.Scene();
-      scene.background=new THREE.Color(0x3a434d);
-      scene.fog=new THREE.FogExp2(0x363f48,0.015);
+// ----- giao diện sảnh -----
+let panel=false,on=true,phase=0,ay=0;const lk={};
+function toast(t){const e=$('ltoast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.opacity=0,2200);}
+function openPanel(){panel=true;$('lpanel').style.display='flex';}
+function closePanel(){panel=false;$('lpanel').style.display='none';}
+$('lclose').onclick=closePanel;$('lstart').onclick=()=>{closePanel();onEnter('cqb');};
+addEventListener('keydown',e=>{lk[e.code]=true;if(e.code==='Escape'&&on)closePanel();});addEventListener('keyup',e=>{lk[e.code]=false;});
 
-      const camera=new THREE.PerspectiveCamera(90,innerWidth/innerHeight,0.05,160);
-      camera.rotation.order='YXZ';
-      scene.add(camera);
+scene.onBeforeRenderObservable.add(()=>{
+  if(!on)return;const dt=Math.min(engine.getDeltaTime()/1000,.05);
+  let mx=0,mz=0;if(!panel){if(lk.KeyW||lk.ArrowUp)mz++;if(lk.KeyS||lk.ArrowDown)mz--;if(lk.KeyD||lk.ArrowRight)mx++;if(lk.KeyA||lk.ArrowLeft)mx--;}
+  const l=Math.hypot(mx,mz);let moving=false;
+  if(l>0){mx/=l;mz/=l;moving=true;AP.x=Math.max(-28.6,Math.min(28.6,AP.x+mx*9*dt));AP.z=Math.max(-24.6,Math.min(28.6,AP.z+mz*9*dt));let d=Math.atan2(mx,mz)-ay;while(d>Math.PI)d-=6.283;while(d<-Math.PI)d+=6.283;ay+=d*Math.min(1,dt*12);}
+  av.rotation.y=ay;phase+=moving?dt*11:0;const sw=moving?Math.sin(phase)*.85:0;legL.rotation.x=sw;legR.rotation.x=-sw;armL.rotation.x=-sw*.8;armR.rotation.x=sw*.8;av.position.y=moving?Math.abs(Math.sin(phase))*.1:0;
+  const k=Math.min(1,dt*4);cam.position.x+=(AP.x*.65-cam.position.x)*k;cam.position.z+=(AP.z-24-cam.position.z)*k;cam.position.y=23;cam.setTarget(new BABYLON.Vector3(cam.position.x,0,cam.position.z+20));
+  let hint=null;
+  pads.forEach(p=>{const d=Math.hypot(AP.x-p.x,AP.z-p.z);
+    if(d<p.r&&!panel){if(!p.cool){p.t+=dt;hint=p;if(p.t>=1.1){p.t=0;p.cool=true;p.fire();}}}else{p.t=Math.max(0,p.t-dt*2);if(d>p.r+1.2)p.cool=false;}
+    const s=1+(p.t/1.1)*.12+(d<p.r?.03:0);p.mesh.scaling.set(s,s,1);});
+  $('lbar').style.width=hint?(hint.t/1.1*100)+'%':'0%';
+  $('lhtxt').textContent=hint?'Đang vào: '+hint.name:'WASD hoặc phím mũi tên để di chuyển · Bước vào vòng tròn để chọn';
+});
+return{scene,show(){on=true;AP.set(0,0,-5);ay=0;pads.forEach(p=>{p.cool=true;p.t=0;});closePanel();},hide(){on=false;}};
+}
+function buildGame(engine,canvas,onExit){
+const Q=new URLSearchParams(location.search),LOW=Q.get('q')==='low'||matchMedia('(pointer:coarse)').matches;
+let MODE='cqb',wave=0,waveWait=false;
+const scene=new BABYLON.Scene(engine);
+scene.clearColor=new BABYLON.Color4(.02,.02,.025,1);
+scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogDensity=0.03;scene.fogColor=new BABYLON.Color3(.04,.045,.05);
+const ip=scene.imageProcessingConfiguration;ip.toneMappingEnabled=true;ip.toneMappingType=BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;ip.exposure=1.2;ip.contrast=1.2;
 
-      const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-      const pr=Math.min(devicePixelRatio,1.75);
-      renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(pr);
-      renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-      renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
-      document.getElementById('game-wrap').appendChild(renderer.domElement);
-      const controls=new THREE.PointerLockControls(camera,document.body);
+// ================= BẢN ĐỒ (mỗi ô = 2m) =================
+const ROWS=[
+"################################","#......#.........#.............#","#......#.........#......E......#","#..E...#....c....#.............#",
+"#......#.........#.....cc......#","###.####.........###.###########","#......................#.......#","#......................#...E...#",
+"#..c...........c.......#.......#","#......................#.......#","######.########.########.#######","#.............#...........#....#",
+"#.............#...........#....#","#....E........#.....c.....#....#","#.............#...........#....#","#######.#######.##########..####",
+"#..........................c...#","#......ccc.....................#","#..............................#","#...P..........####.######.....#",
+"#..............#E..........E...#","################################"];
+const H=ROWS.length,W=ROWS[0].length,CELL=2,WH=3.2,MAP=ROWS.map(s=>s.split('')),SPAWNS=[];let PS=[0,0];
+const cx=c=>(c+.5-W/2)*CELL,cz=r=>(r+.5-H/2)*CELL;
+for(let r=0;r<H;r++)for(let c=0;c<W;c++){const ch=MAP[r][c];if(ch==='P'){PS=[cx(c),cz(r)];MAP[r][c]='.';}else if(ch==='E'){SPAWNS.push([c,r]);MAP[r][c]='.';}}
+const isSolid=(c,r)=>c<0||r<0||c>=W||r>=H||MAP[r][c]==='#'||MAP[r][c]==='c';
+function blocked(x,z,rad){const c0=Math.floor((x-rad)/CELL+W/2),c1=Math.floor((x+rad)/CELL+W/2),r0=Math.floor((z-rad)/CELL+H/2),r1=Math.floor((z+rad)/CELL+H/2);
+  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)if(isSolid(c,r)){const bx0=(c-W/2)*CELL,bz0=(r-H/2)*CELL,nx=Math.max(bx0,Math.min(x,bx0+CELL)),nz=Math.max(bz0,Math.min(z,bz0+CELL));if((x-nx)**2+(z-nz)**2<rad*rad)return true;}return false;}
+function los(ax,az,bx,bz){const d=Math.hypot(bx-ax,bz-az),n=Math.ceil(d/.4);for(let i=1;i<n;i++){const t=i/n;if(isSolid(Math.floor((ax+(bx-ax)*t)/CELL+W/2),Math.floor((az+(bz-az)*t)/CELL+H/2)))return false;}return true;}
+function bfs(sc,sr,tc,tr){const key=(c,r)=>r*W+c,prev=new Int16Array(W*H).fill(-2),q=[key(sc,sr)],tk=key(tc,tr);prev[q[0]]=-1;
+  for(let qi=0;qi<q.length;qi++){const k=q[qi];if(k===tk)break;const c=k%W,r=(k/W)|0;for(const d of [[1,0],[-1,0],[0,1],[0,-1]]){const nc=c+d[0],nr=r+d[1];if(isSolid(nc,nr))continue;const nk=key(nc,nr);if(prev[nk]!==-2)continue;prev[nk]=k;q.push(nk);}}
+  if(prev[tk]===-2)return [];const p=[];for(let k=tk;k!==-1;k=prev[k])p.push([k%W,(k/W)|0]);p.reverse();return p.slice(1);}
+const cellOf=(x,z)=>[Math.floor(x/CELL+W/2),Math.floor(z/CELL+H/2)];
 
-      // Tạo Environment Map phản chiếu PBR cho súng kim loại, vũng nước & container!
-      const pmrem=new THREE.PMREMGenerator(renderer);
-      const envScene=new THREE.Scene();
-      envScene.background=new THREE.Color(0x52606e);
-      const envSky=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.MeshBasicMaterial({color:0xdde8f2,side:THREE.DoubleSide}));
-      envSky.rotation.x=Math.PI/2;envSky.position.y=10;envScene.add(envSky);
-      const envFloor=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.MeshBasicMaterial({color:0x1a1e24,side:THREE.DoubleSide}));
-      envFloor.rotation.x=Math.PI/2;envFloor.position.y=-10;envScene.add(envFloor);
-      scene.environment=pmrem.fromScene(envScene,0.04).texture;
-      pmrem.dispose();
+// ================= TEXTURE =================
+const dyn=(n,w,h,f)=>{const t=new BABYLON.DynamicTexture(n,{width:w,height:h},scene,true),g=t.getContext();f(g);t.update();t.anisotropicFilteringLevel=8;return t;};
+const wallTex=dyn('w',512,512,g=>{g.fillStyle='#8d9096';g.fillRect(0,0,512,512);
+  for(let i=0;i<140;i++){const x=(i*97)%512,y=(i*211)%512,r=20+(i*37)%60,gr=g.createRadialGradient(x,y,2,x,y,r);gr.addColorStop(0,i%2?'rgba(0,0,0,.08)':'rgba(255,255,255,.06)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(x-r,y-r,r*2,r*2);}
+  g.fillStyle='#5b6a65';g.fillRect(0,350,512,162);g.fillStyle='rgba(0,0,0,.35)';g.fillRect(0,346,512,6);
+  g.fillStyle='rgba(0,0,0,.22)';[0,256].forEach(x=>g.fillRect(x,0,3,512));g.fillStyle='rgba(30,25,18,.12)';[60,330,430].forEach((x,i)=>g.fillRect(x,40+i*30,10,260));
+  g.strokeStyle='rgba(0,0,0,.35)';g.lineWidth=2;g.beginPath();g.moveTo(120,60);g.lineTo(140,120);g.lineTo(125,190);g.lineTo(150,260);g.stroke();});
+const floorTex=dyn('f',512,512,g=>{g.fillStyle='#6d6f72';g.fillRect(0,0,512,512);
+  for(let i=0;i<120;i++){const x=(i*131)%512,y=(i*89)%512,r=18+(i*29)%50,gr=g.createRadialGradient(x,y,2,x,y,r);gr.addColorStop(0,i%3?'rgba(0,0,0,.09)':'rgba(255,255,255,.05)');gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(x-r,y-r,r*2,r*2);}
+  g.fillStyle='rgba(0,0,0,.35)';g.fillRect(254,0,4,512);g.fillRect(0,254,512,4);g.fillRect(0,0,512,3);g.fillRect(0,0,3,512);});
+const crateTex=dyn('cr',256,256,g=>{g.fillStyle='#7a5a36';g.fillRect(0,0,256,256);g.fillStyle='rgba(0,0,0,.35)';for(let i=0;i<4;i++)g.fillRect(0,i*64,256,4);g.fillStyle='rgba(255,255,255,.07)';for(let i=0;i<40;i++)g.fillRect((i*53)%256,(i*29)%256,60,2);g.strokeStyle='#3b2a16';g.lineWidth=8;g.strokeRect(4,4,248,248);});
+const std=(c,spec=.05)=>{const m=new BABYLON.StandardMaterial('m',scene);m.diffuseColor=BABYLON.Color3.FromHexString(c);m.specularColor=new BABYLON.Color3(spec,spec,spec);return m;};
+const wallMat=new BABYLON.StandardMaterial('wm',scene);wallMat.diffuseTexture=wallTex;wallMat.specularColor=new BABYLON.Color3(.04,.04,.04);wallMat.backFaceCulling=false;wallMat.twoSidedLighting=true;
+const crateMat=new BABYLON.StandardMaterial('cm',scene);crateMat.diffuseTexture=crateTex;crateMat.specularColor=new BABYLON.Color3(.03,.03,.03);
 
-      // Render Target + Shader Ống kính Bodycam (Fisheye + Chromatic Aberration + Film Noise + Vignette)
-      let rt=new THREE.WebGLRenderTarget(Math.floor(innerWidth*pr),Math.floor(innerHeight*pr),{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
-      const postScene=new THREE.Scene(),postCam=new THREE.OrthographicCamera(-1,1,1,-1,0,1);
-      const postMat=new THREE.ShaderMaterial({
-        uniforms:{tDiffuse:{value:rt.texture},uTime:{value:0},uHurt:{value:0},uGlitch:{value:0}},
-        vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}`,
-        fragmentShader:`
-          uniform sampler2D tDiffuse; uniform float uTime; uniform float uHurt; uniform float uGlitch; varying vec2 vUv;
-          vec2 barrel(vec2 uv,float k){vec2 c=uv-0.5;float r2=dot(c,c);return 0.5+c*(1.0+k*r2+0.5*k*r2*r2);}
-          void main(){
-            vec2 uv=barrel(vUv,0.22);
-            if(uGlitch>0.0) uv.x += sin(uv.y*90.0+uTime*60.0)*0.015*uGlitch;
-            if(uv.x<0.0||uv.x>1.0||uv.y<0.0||uv.y>1.0){gl_FragColor=vec4(0.01,0.01,0.015,1.0);return;}
-            float edge=length(uv-0.5);
-            float ca=0.0024*edge+uHurt*0.0065*edge;
-            float r=texture2D(tDiffuse,uv+vec2(ca,0.0)).r;
-            float g=texture2D(tDiffuse,uv).g;
-            float b=texture2D(tDiffuse,uv-vec2(ca,0.0)).b;
-            vec3 col=vec3(r,g,b);
-            float luma=dot(col,vec3(0.299,0.587,0.114));
-            col=mix(col,vec3(luma),0.22+uHurt*0.58);
-            col=(col-0.5)*1.16+0.5;
-            float noise=fract(sin(dot(uv*(uTime+1.0),vec2(12.9898,78.233)))*43758.5453);
-            col+=(noise-0.5)*(0.042+(1.0-luma)*0.032);
-            float scan=sin(uv.y*680.0)*0.016;
-            col-=scan;
-            float vig=smoothstep(0.95,0.34,edge);
-            col*=mix(0.28,1.0,vig);
-            col=mix(col,vec3(0.55,0.02,0.03),uHurt*smoothstep(0.18,0.72,edge)*0.88);
-            gl_FragColor=vec4(clamp(col,0.0,1.0),1.0);
-          }
-        `
-      });
-      postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),postMat));
+// ================= DỰNG MAP =================
+function boxMesh(w,h,d,TU,TV){const x=w/2,y=h/2,z=d/2,F=[
+  {n:[1,0,0],v:[[x,-y,z],[x,-y,-z],[x,y,-z],[x,y,z]],u:[d,h]},{n:[-1,0,0],v:[[-x,-y,-z],[-x,-y,z],[-x,y,z],[-x,y,-z]],u:[d,h]},
+  {n:[0,1,0],v:[[-x,y,z],[x,y,z],[x,y,-z],[-x,y,-z]],u:null},{n:[0,-1,0],v:[[-x,-y,-z],[x,-y,-z],[x,-y,z],[-x,-y,z]],u:null},
+  {n:[0,0,1],v:[[-x,-y,z],[x,-y,z],[x,y,z],[-x,y,z]],u:[w,h]},{n:[0,0,-1],v:[[x,-y,-z],[-x,-y,-z],[-x,y,-z],[x,y,-z]],u:[w,h]}];
+  const P=[],N=[],I=[],UV=[],B=[[0,0],[1,0],[1,1],[0,1]];
+  F.forEach(f=>{const o=P.length/3;f.v.forEach((p,k)=>{P.push(...p);N.push(...f.n);if(!f.u)UV.push(.1,.97);else UV.push(B[k][0]*f.u[0]/TU,B[k][1]*f.u[1]/TV);});I.push(o,o+2,o+1,o,o+3,o+2);});
+  const m=new BABYLON.Mesh('b',scene),vd=new BABYLON.VertexData();vd.positions=P;vd.normals=N;vd.indices=I;vd.uvs=UV;vd.applyToMesh(m);return m;}
+const walls=[];
+for(let r=0;r<H;r++){let c=0;while(c<W){if(MAP[r][c]==='#'){const a=c;while(c<W&&MAP[r][c]==='#')c++;const w=(c-a)*CELL,m=boxMesh(w,WH,CELL,4,WH);m.position.set((a-W/2)*CELL+w/2,WH/2,cz(r));walls.push(m);}else c++;}}
+const wallAll=BABYLON.Mesh.MergeMeshes(walls,true,true);wallAll.material=wallMat;wallAll.metadata={wall:1};
+for(let r=0;r<H;r++)for(let c=0;c<W;c++)if(MAP[r][c]==='c'){const m=BABYLON.MeshBuilder.CreateBox('cr',{size:1},scene);m.scaling.set(1.4,1.2,1.4);m.position.set(cx(c),.6,cz(r));m.material=crateMat;m.metadata={wall:1};}
+const floor=BABYLON.MeshBuilder.CreateGround('fl',{width:W*CELL,height:H*CELL},scene),fm=new BABYLON.StandardMaterial('fm',scene);fm.diffuseTexture=floorTex;floorTex.uScale=W*CELL/4;floorTex.vScale=H*CELL/4;fm.specularColor=new BABYLON.Color3(.06,.06,.06);floor.material=fm;floor.metadata={wall:1};
+const ceil=BABYLON.MeshBuilder.CreateGround('ce',{width:W*CELL,height:H*CELL},scene),cm=std('#2c2e31');cm.backFaceCulling=false;ceil.position.y=WH;ceil.material=cm;ceil.metadata={wall:1};
+const panels=[],pm=new BABYLON.StandardMaterial('pm',scene);pm.emissiveColor=new BABYLON.Color3(.85,.92,1);pm.disableLighting=true;
+for(let r=1;r<H-1;r++)for(let c=1;c<W-1;c++)if(!isSolid(c,r)&&c%4===1&&r%4===2){const p=BABYLON.MeshBuilder.CreateBox('lp',{width:1.6,height:.05,depth:.5},scene);p.position.set(cx(c),WH-.03,cz(r));p.material=pm;p.isPickable=false;panels.push(p);}
+if(!LOW){const gl=new BABYLON.GlowLayer('gl',scene);gl.intensity=.55;}
 
-      // Ánh sáng tự nhiên + Nắng xiên qua lỗ thủng mái
-      scene.add(new THREE.HemisphereLight(0xcddae6,0x2a2d30,0.95));
-      const sun=new THREE.DirectionalLight(0xffeed6,1.65);
-      sun.position.set(24,42,18);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
-      Object.assign(sun.shadow.camera,{near:5,far:120,left:-42,right:42,top:42,bottom:-42});scene.add(sun);
+// ================= ÁNH SÁNG =================
+const hemi=new BABYLON.HemisphericLight('h',new BABYLON.Vector3(0,1,0),scene);hemi.intensity=.5;hemi.groundColor=new BABYLON.Color3(.12,.12,.14);
+const cam=new BABYLON.FreeCamera('cam',new BABYLON.Vector3(0,1.55,0),scene);cam.inputs.clear();cam.minZ=.03;cam.maxZ=120;cam.fov=1.25;
+const flash=new BABYLON.SpotLight('fl',new BABYLON.Vector3(.12,-.1,.2),new BABYLON.Vector3(0,0,1),1.0,6,scene);flash.parent=cam;flash.intensity=2.2;flash.range=28;
+const mflash=new BABYLON.PointLight('mf',new BABYLON.Vector3(0,.05,1.2),scene);mflash.parent=cam;mflash.diffuse=new BABYLON.Color3(1,.78,.45);mflash.range=14;mflash.intensity=0;
+let flashOn=true;
 
-      /* 3. TEXTURE PBR CAO CẤP (MAP + BUMP + ROUGHNESS VŨNG NƯỚC) */
-      function createPBR(kind,repX=1,repY=1){
-        const c=document.createElement('canvas'),b=document.createElement('canvas'),r=document.createElement('canvas');
-        c.width=c.height=b.width=b.height=r.width=r.height=512;
-        const gc=c.getContext('2d'),gb=b.getContext('2d'),gr=r.getContext('2d');
+// ================= SÚNG (góc nhìn thứ nhất) =================
+scene.setRenderingAutoClearDepthStencil(1,true,true,false);
+const gun=new BABYLON.TransformNode('gun',scene);gun.parent=cam;
+const gunMat=std('#17191c',.5),gloveMat=std('#2a2d28',.05),skinMat=std('#b98a6a',.05);
+function gpart(w,h,d,x,y,z,m,rx=0){const b=BABYLON.MeshBuilder.CreateBox('g',{width:w,height:h,depth:d},scene);b.parent=gun;b.position.set(x,y,z);b.rotation.x=rx;b.material=m;b.renderingGroupId=1;b.isPickable=false;return b;}
+gpart(.07,.09,.55,0,0,.25,gunMat);gpart(.03,.03,.45,0,.015,.72,gunMat);gpart(.05,.18,.08,0,-.13,.2,gunMat,.18);gpart(.06,.12,.3,0,-.02,-.12,gunMat);gpart(.018,.05,.018,0,.07,.55,gunMat);gpart(.03,.04,.03,0,.075,.08,gunMat);gpart(.05,.08,.1,0,-.1,0,gunMat,.3);
+gpart(.07,.08,.1,.0,-.12,.02,skinMat);gpart(.09,.09,.28,-.02,-.1,-.12,gloveMat);gpart(.08,.08,.18,-.04,-.07,.5,skinMat);gpart(.09,.09,.3,-.12,-.1,.25,gloveMat,0).rotation.y=.25;
+const flashMesh=BABYLON.MeshBuilder.CreateBox('mfm',{width:.1,height:.1,depth:.2},scene);flashMesh.parent=gun;flashMesh.position.set(0,.02,1.02);flashMesh.renderingGroupId=1;flashMesh.isPickable=false;
+const fmat=new BABYLON.StandardMaterial('fmm',scene);fmat.emissiveColor=new BABYLON.Color3(1,.8,.4);fmat.disableLighting=true;flashMesh.material=fmat;flashMesh.setEnabled(false);
 
-        if(kind==='wetFloor'){
-          gc.fillStyle='#555a60';gc.fillRect(0,0,512,512);gb.fillStyle='#808080';gb.fillRect(0,0,512,512);gr.fillStyle='#dcdcdc';gr.fillRect(0,0,512,512);
-          for(let i=0;i<6000;i++){const x=Math.random()*512,y=Math.random()*512,v=Math.random()<0.5?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.07)';gc.fillStyle=v;gc.fillRect(x,y,4,4);gb.fillStyle=v;gb.fillRect(x,y,3,3);}
-          // Vũng nước đọng bóng loáng (màu tối trên roughnessMap = rất bóng!)
-          for(let p=0;p<5;p++){
-            const px=80+Math.random()*350,py=80+Math.random()*350,prad=45+Math.random()*75;
-            const g1=gr.createRadialGradient(px,py,5,px,py,prad);g1.addColorStop(0,'#141414');g1.addColorStop(0.7,'#262626');g1.addColorStop(1,'#dcdcdc');
-            gr.fillStyle=g1;gr.beginPath();gr.arc(px,py,prad,0,6.28);gr.fill();
-            const g2=gc.createRadialGradient(px,py,5,px,py,prad);g2.addColorStop(0,'rgba(20,24,28,0.42)');g2.addColorStop(1,'rgba(20,24,28,0)');
-            gc.fillStyle=g2;gc.beginPath();gc.arc(px,py,prad,0,6.28);gc.fill();
-          }
-          gc.strokeStyle='#383c40';gc.lineWidth=4;gc.strokeRect(0,0,512,512);gb.strokeStyle='#222';gb.lineWidth=4;gb.strokeRect(0,0,512,512);
-        }else if(kind==='brickWall'){
-          gc.fillStyle='#6e706e';gc.fillRect(0,0,512,512);gb.fillStyle='#444';gb.fillRect(0,0,512,512);gr.fillStyle='#e5e5e5';gr.fillRect(0,0,512,512);
-          for(let row=0;row<16;row++){
-            const y=row*32,off=(row%2)*32;
-            for(let col=-1;col<9;col++){
-              const x=col*64+off,shade=95+Math.floor(Math.random()*35);
-              gc.fillStyle=`rgb(${shade},${shade-2},${shade-5})`;gc.fillRect(x+2,y+2,60,28);
-              gb.fillStyle='#b8b8b8';gb.fillRect(x+2,y+2,60,28);
-            }
-          }
-          // Vết ố ẩm mốc chân tường
-          const ao=gc.createLinearGradient(0,320,0,512);ao.addColorStop(0,'rgba(20,24,18,0)');ao.addColorStop(1,'rgba(20,24,18,0.65)');
-          gc.fillStyle=ao;gc.fillRect(0,320,512,192);
-        }else if(kind==='container'){
-          gc.fillStyle='#2a4154';gc.fillRect(0,0,512,512);gb.fillStyle='#555';gb.fillRect(0,0,512,512);gr.fillStyle='#999';gr.fillRect(0,0,512,512);
-          for(let x=0;x<512;x+=24){
-            gc.fillStyle='rgba(0,0,0,0.22)';gc.fillRect(x,0,10,512);gc.fillStyle='rgba(255,255,255,0.08)';gc.fillRect(x+10,0,5,512);
-            gb.fillStyle='#d8d8d8';gb.fillRect(x+10,0,12,512);
-          }
-          // Vết rỉ sét
-          for(let i=0;i<25;i++){gc.fillStyle='rgba(115,48,20,0.35)';gc.fillRect(Math.random()*512,Math.random()*512,12+Math.random()*40,4+Math.random()*18);}
-        }else{
-          gc.fillStyle='#785a3c';gc.fillRect(0,0,512,512);gb.fillStyle='#777';gb.fillRect(0,0,512,512);gr.fillStyle='#d8d8d8';gr.fillRect(0,0,512,512);
-          for(let y=0;y<512;y+=64){gc.fillStyle='rgba(0,0,0,0.25)';gc.fillRect(0,y,512,4);gb.fillStyle='#222';gb.fillRect(0,y,512,5);for(let k=0;k<40;k++){gc.fillStyle='rgba(40,25,10,0.12)';gc.fillRect(0,y+Math.random()*60,512,2);}}
-        }
-        const tM=new THREE.CanvasTexture(c),tB=new THREE.CanvasTexture(b),tR=new THREE.CanvasTexture(r);
-        [tM,tB,tR].forEach(t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(repX,repY);});
-        return new THREE.MeshStandardMaterial({map:tM,bumpMap:tB,bumpScale:0.06,roughnessMap:tR,roughness:0.9,metalness:kind==='container'?0.45:0.08});
-      }
+// ================= ÂM THANH (tạo bằng code, có vang trong nhà) =================
+let AC=null,rev=null,master=null;
+function initAudio(){if(AC)return;AC=new(window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=.6;master.connect(AC.destination);
+  const len=AC.sampleRate*1.8,buf=AC.createBuffer(2,len,AC.sampleRate);for(let ch=0;ch<2;ch++){const d=buf.getChannelData(ch);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2.6);}
+  rev=AC.createConvolver();rev.buffer=buf;const wet=AC.createGain();wet.gain.value=.45;rev.connect(wet);wet.connect(master);}
+function noise(dur,f0,f1,vol,wet,pow=3){const t=AC.currentTime,n=AC.createBufferSource(),b=AC.createBuffer(1,AC.sampleRate*dur,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,pow);n.buffer=b;
+  const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(f0,t);f.frequency.exponentialRampToValueAtTime(f1,t+dur);const g=AC.createGain();g.gain.value=vol;n.connect(f);f.connect(g);g.connect(master);if(wet)g.connect(rev);n.start(t);}
+function sfx(kind,vol=1){if(!AC)return;const t=AC.currentTime;
+  if(kind==='shot'){noise(.35,5000,400,vol,true);const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(120,t);o.frequency.exponentialRampToValueAtTime(40,t+.15);g.gain.setValueAtTime(vol*.9,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);o.connect(g);g.connect(master);o.start(t);o.stop(t+.2);}
+  else if(kind==='step')noise(.09,500,120,vol*.5,false,2);
+  else if(kind==='click'){const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.frequency.value=900;g.gain.setValueAtTime(vol*.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.04);o.connect(g);g.connect(master);o.start(t);o.stop(t+.05);}
+  else if(kind==='hit')noise(.25,900,100,vol,true,2);}
 
-      /* 4. BẢN ĐỒ CHI TIẾT + TIA NẮNG VOLUMETRIC + BỤI BAY */
-      const mapGroup=new THREE.Group();scene.add(mapGroup);
-      let mapMeshes=[],colliders=[],flickerLights=[],dustPoints=null,selectedMap='warehouse';
-      function addBox(x,y,z,w,h,d,mat){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y+h/2,z);m.castShadow=true;m.receiveShadow=true;mapGroup.add(m);mapMeshes.push(m);colliders.push({minX:x-w/2,maxX:x+w/2,minY:y,maxY:y+h,minZ:z-d/2,maxZ:z+d/2});return m;}
-      function addGodRay(x,z){
-        const c=document.createElement('canvas');c.width=64;c.height=128;const g=c.getContext('2d');
-        const gr=g.createLinearGradient(0,0,0,128);gr.addColorStop(0,'rgba(255,240,210,0.26)');gr.addColorStop(1,'rgba(255,240,210,0)');
-        g.fillStyle=gr;g.fillRect(0,0,64,128);
-        const cone=new THREE.Mesh(new THREE.ConeGeometry(4.2,9.5,14,1,true),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
-        cone.position.set(x,4.2,z);cone.rotation.z=-0.22;cone.rotation.x=-0.15;mapGroup.add(cone);
-      }
-      function addCeilingLamp(x,z,flicker=false){
-        const fx=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.12,0.4),new THREE.MeshBasicMaterial({color:0xe8f2ff}));fx.position.set(x,6.9,z);mapGroup.add(fx);
-        const pl=new THREE.PointLight(0xd9ecff,1.3,22,1.6);pl.position.set(x,6.2,z);mapGroup.add(pl);
-        if(flicker)flickerLights.push({light:pl,fixture:fx,phase:Math.random()*10});
-      }
+// ================= NGƯỜI CHƠI =================
+const P={x:PS[0],z:PS[1],vx:0,vz:0,yaw:0,pitch:0,hp:100,ammo:30,reserve:120,cd:0,rel:0,relT:0,rec:0,kick:0,kickR:0,shake:0,phase:0,stepS:0,hurt:0,dead:false,deadT:0,kills:0};
+P.yaw=Math.PI;
+const keys={},mouse={0:false,2:false};let locked=false,T=0,flick=0;
+const $=id=>document.getElementById(id);
+function say(t,ms=1600){const m=$('msg');m.textContent=t;m.style.opacity=1;clearTimeout(say.t);say.t=setTimeout(()=>m.style.opacity=0,ms);}
+addEventListener('keydown',e=>{keys[e.code]=true;
+  if(!locked)return;
+  if(e.code==='KeyR')reload();
+  if(e.code==='KeyF'){flashOn=!flashOn;flash.intensity=flashOn?2.2:0;sfx('click',1);}
+  if(e.code==='Enter'&&(P.dead||(MODE==='cqb'&&enemies.every(x=>x.dead))))restart();});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+addEventListener('mousedown',e=>{if(!locked)return;mouse[e.button]=true;if(P.dead&&P.deadT>1.2)restart();});
+addEventListener('mouseup',e=>{mouse[e.button]=false;});
+addEventListener('contextmenu',e=>e.preventDefault());
+addEventListener('mousemove',e=>{if(!locked||P.dead)return;const k=mouse[2]?.55:1;P.yaw+=e.movementX*.0021*k;P.pitch=Math.max(-1.45,Math.min(1.45,P.pitch+e.movementY*.0021*k));gun.rotation.y+=e.movementX*.0006;gun.rotation.x+=e.movementY*.0006;});
+const st=$('start');st.onclick=()=>{initAudio();if(AC&&AC.state==='suspended')AC.resume();canvas.requestPointerLock();};
+document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===canvas;st.style.display=locked?'none':'flex';});
 
-      function buildMap(type){
-        while(mapGroup.children.length)mapGroup.remove(mapGroup.children[0]);
-        mapMeshes=[];colliders=[];flickerLights=[];
-        const flMat=createPBR('wetFloor',14,16),wlMat=createPBR('brickWall',5,2),cntMat=createPBR('container',2,1),wdMat=createPBR('wood',1,1);
-        const concretePillar=createPBR('wetFloor',1,2),barrelMat=new THREE.MeshStandardMaterial({color:0x7c1d1d,roughness:0.4,metalness:0.5});
+function reload(){if(P.rel>0||P.ammo>=30||P.reserve<=0||P.dead)return;P.relT=2.3;if(Math.random()<.12){P.relT+=.9;say('RƠI BĂNG ĐẠN...');}P.rel=P.relT;sfx('click',1);setTimeout(()=>sfx('click',1),P.relT*350);setTimeout(()=>sfx('click',1.4),P.relT*800);}
+const spark=[];for(let i=0;i<14;i++){const s=BABYLON.MeshBuilder.CreateSphere('sp',{diameter:.07,segments:4},scene),m=new BABYLON.StandardMaterial('sm',scene);m.emissiveColor=new BABYLON.Color3(1,.7,.3);m.disableLighting=true;s.material=m;s.setEnabled(false);s.isPickable=false;spark.push({m:s,t:0});}
+let spi=0;function sparkAt(p){const s=spark[spi++%spark.length];s.m.position.copyFrom(p);s.m.setEnabled(true);s.t=.12;}
+function fire(){P.ammo--;P.cd=.085;const ads=mouse[2],k=ads?.55:1,sp=Math.hypot(P.vx,P.vz);
+  P.pitch-=.011*k;P.yaw+=(Math.random()-.5)*.006*k;P.rec+=.011*k;P.kick+=.03;P.kickR+=.05;P.shake+=.12;
+  sfx('shot',.9);flashMesh.setEnabled(true);mflash.intensity=6;setTimeout(()=>{flashMesh.setEnabled(false);mflash.intensity=0;},45);
+  const spread=(ads?.003:.016)+sp*.004,fx=Math.sin(P.yaw)*Math.cos(P.pitch),fy=-Math.sin(P.pitch),fz=Math.cos(P.yaw)*Math.cos(P.pitch),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw),sx=(Math.random()-.5)*spread*2,sy=(Math.random()-.5)*spread*2;
+  const dir=new BABYLON.Vector3(fx+rx*sx,fy+sy,fz+rz*sx).normalize(),hit=scene.pickWithRay(new BABYLON.Ray(cam.position.clone(),dir,90),m=>m.isPickable&&m.metadata);
+  if(hit&&hit.hit&&hit.pickedMesh){const md=hit.pickedMesh.metadata;if(md.enemy)md.enemy.hit(md.zone,md.zone==='head'?100:38);else sparkAt(hit.pickedPoint);}
+  if(P.ammo===0)say('HẾT ĐẠN · R ĐỂ NẠP');}
+function hurtPlayer(d){if(P.dead)return;P.hp-=d;P.hurt=Math.min(1,P.hurt+.75);P.shake+=.5;sfx('hit',.8);if(P.hp<=0){P.hp=0;P.dead=true;P.deadT=0;$('dead').style.display='flex';}}
 
-        const floor=new THREE.Mesh(new THREE.PlaneGeometry(66,74),flMat);floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;mapGroup.add(floor);mapMeshes.push(floor);
-        // Xà mái bê tông & giàn thép tạo khe nắng tự nhiên
-        [-24,-8,8,24].forEach(cz=>{const bm=new THREE.Mesh(new THREE.BoxGeometry(62,0.55,4.2),wlMat);bm.position.set(0,7.2,cz);bm.castShadow=true;mapGroup.add(bm);});
-        addBox(0,0,-35,62,7.2,2,wlMat);addBox(0,0,35,62,7.2,2,wlMat);addBox(-31,0,0,2,7.2,72,wlMat);addBox(31,0,0,2,7.2,72,wlMat);
+// ================= KẺ ĐỊCH =================
+const EM={vest:std('#4a4f3a'),pants:std('#3b3f33'),skin:std('#c89b7b'),helm:std('#2d3328'),gun:std('#15171a',.3)};
+const ZM={cloth:std('#4b5b46'),skin:std('#6f9a57'),dark:std('#2b3b2a')};
+const enemies=[];const ang=(a,b)=>{let d=a-b;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;return d;};
+class Enemy{
+  constructor(c,r,z){this.x=cx(c);this.z=cz(r);this.yaw=Math.random()*6.28;this.hp=100;this.dead=false;this.dieT=0;this.alert=0;this.seenT=99;this.cd=1;this.path=[];this.pt=0;this.idle=0;this.ph=Math.random()*6;this.mf=0;
+    this.root=new BABYLON.TransformNode('e',scene);
+    const part=(par,w,h,d,x,y,z,m,zone)=>{const b=BABYLON.MeshBuilder.CreateBox('p',{width:w,height:h,depth:d},scene);b.parent=par;b.position.set(x,y,z);b.material=m;b.metadata={enemy:this,zone};return b;};
+    part(this.root,.46,.62,.26,0,1.15,0,EM.vest,'body');
+    const hd=BABYLON.MeshBuilder.CreateSphere('h',{diameter:.26,segments:8},scene);hd.parent=this.root;hd.position.set(0,1.58,0);hd.material=EM.skin;hd.metadata={enemy:this,zone:'head'};
+    part(this.root,.3,.12,.3,0,1.68,0,EM.helm,'head');
+    this.hipL=new BABYLON.TransformNode('hl',scene);this.hipL.parent=this.root;this.hipL.position.set(-.12,.82,0);part(this.hipL,.2,.8,.22,0,-.4,0,EM.pants,'body');
+    this.hipR=new BABYLON.TransformNode('hr',scene);this.hipR.parent=this.root;this.hipR.position.set(.12,.82,0);part(this.hipR,.2,.8,.22,0,-.4,0,EM.pants,'body');
+    part(this.root,.13,.13,.55,-.24,1.3,.25,EM.vest,'body');part(this.root,.13,.13,.55,.2,1.32,.28,EM.vest,'body');part(this.root,.08,.12,.7,.05,1.3,.5,EM.gun,'body');
+    this.fl=part(this.root,.12,.12,.12,.05,1.3,.9,new BABYLON.StandardMaterial('x',scene),'body');this.fl.material.emissiveColor=new BABYLON.Color3(1,.8,.4);this.fl.material.disableLighting=true;this.fl.setEnabled(false);this.fl.isPickable=false;
+    this.root.position.set(this.x,0,this.z);this.zombie=!!z;if(z){this.hp=70;this.zs=2.6+Math.min(wave,10)*.18;this.cd=.5;this.root.getChildMeshes().forEach(m=>{if(m.material===EM.vest)m.material=ZM.cloth;else if(m.material===EM.skin)m.material=ZM.skin;else if(m.material===EM.helm||m.material===EM.pants)m.material=ZM.dark;else if(m.material===EM.gun)m.setEnabled(false);});}enemies.push(this);}
+  hit(zone,dmg){if(this.dead)return;this.hp-=dmg;this.alert=1;this.seenT=0;this.lx=P.x;this.lz=P.z;sfx('hit',.5);
+    if(this.hp<=0){this.dead=true;this.fl.setEnabled(false);P.kills++;say(zone==='head'?'HẠ GỤC · BẮN VÀO ĐẦU':'MỤC TIÊU GỤC');if(MODE==='cqb'&&enemies.every(e=>e.dead))say('KHU VỰC AN TOÀN · ENTER ĐỂ CHƠI LẠI',4000);}}
+  shoot(dist){sfx('shot',Math.min(1,9/(dist+2))*.85);this.mf=.05;this.fl.setEnabled(true);
+    const err=(Math.random()+Math.random()-1)*(.09+dist*.0035),need=Math.atan2(.32,dist);if(Math.abs(err)<need)hurtPlayer(20);}
+  update(dt){
+    if(this.dead){this.dieT+=dt;this.root.rotation.x=-Math.min(this.dieT/.5,1)*1.5;if(this.dieT>14)this.root.setEnabled(false);return;}
+    if(this.zombie)return this.updateZ(dt);
+    if(this.mf>0){this.mf-=dt;if(this.mf<=0)this.fl.setEnabled(false);}
+    const dx=P.x-this.x,dz=P.z-this.z,dist=Math.hypot(dx,dz);
+    const sees=!P.dead&&dist<26&&los(this.x,this.z,P.x,P.z)&&(dist<7||Math.abs(ang(Math.atan2(dx,dz),this.yaw))<1.15);
+    if(sees){this.seenT=0;this.alert+=dt;this.lx=P.x;this.lz=P.z;}else this.seenT+=dt;
+    let moving=false,spd=1.5,face=null;
+    if(sees&&this.alert>.45){face=Math.atan2(dx,dz);this.cd-=dt;if(this.cd<=0){this.shoot(dist);this.cd=.28+Math.random()*.35;}
+      if(dist>14){spd=2.2;moving=this.follow(dt,spd,P.x,P.z);}}
+    else if(this.seenT<6&&this.lx!==undefined&&!P.dead){spd=3;moving=this.follow(dt,spd,this.lx,this.lz);}
+    else{this.alert=Math.max(0,this.alert-dt);if(this.idle>0){this.idle-=dt;}else{moving=this.follow(dt,1.6,null,null);}}
+    const tgt=face!==null?face:(moving?this.dirYaw:this.yaw);this.yaw+=ang(tgt,this.yaw)*Math.min(1,dt*7);
+    this.ph+=moving?dt*spd*3.2:0;const sw=moving?Math.sin(this.ph)*.7:0;this.hipL.rotation.x=sw;this.hipR.rotation.x=-sw;
+    this.root.position.set(this.x,0,this.z);this.root.rotation.y=this.yaw;}
+  updateZ(dt){const dx=P.x-this.x,dz=P.z-this.z,dist=Math.hypot(dx,dz);let moving=false;
+    if(!P.dead){if(dist>1.1)moving=this.follow(dt,this.zs,P.x,P.z);else{this.cd-=dt;if(this.cd<=0){hurtPlayer(14);this.cd=.9;}}}
+    const tgt=(dist<12&&!P.dead)?Math.atan2(dx,dz):(moving?this.dirYaw:this.yaw);this.yaw+=ang(tgt,this.yaw)*Math.min(1,dt*7);
+    this.ph+=moving?dt*this.zs*3.2:0;const sw=moving?Math.sin(this.ph)*.7:0;this.hipL.rotation.x=sw;this.hipR.rotation.x=-sw;
+    this.root.position.set(this.x,0,this.z);this.root.rotation.y=this.yaw;}
+  follow(dt,spd,tx,tz){
+    this.pt-=dt;
+    if(tx!==null){if(this.pt<=0||!this.path.length){this.pt=.7;const a=cellOf(this.x,this.z),b=cellOf(tx,tz);this.path=bfs(a[0],a[1],b[0],b[1]);}}
+    else if(!this.path.length){const a=cellOf(this.x,this.z);let c,r,n=0;do{c=1+Math.floor(Math.random()*(W-2));r=1+Math.floor(Math.random()*(H-2));n++;}while(isSolid(c,r)&&n<40);this.path=bfs(a[0],a[1],c,r);this.idle=1+Math.random()*2.5;if(!this.path.length)return false;}
+    const n=this.path[0];if(!n)return false;const nx=cx(n[0]),nz=cz(n[1]),dx=nx-this.x,dz=nz-this.z,d=Math.hypot(dx,dz);
+    if(d<.3){this.path.shift();return true;}
+    this.dirYaw=Math.atan2(dx,dz);const mx=dx/d*spd*dt,mz=dz/d*spd*dt;if(!blocked(this.x+mx,this.z,.3))this.x+=mx;if(!blocked(this.x,this.z+mz,.3))this.z+=mz;return true;}
+}
+function spawnEnemies(){enemies.forEach(e=>e.root.dispose());enemies.length=0;
+  if(MODE==='zombie'){const n=Math.min(4+wave*2,24),cells=[];for(let r=1;r<H-1;r++)for(let c=1;c<W-1;c++)if(!isSolid(c,r)&&Math.hypot(cx(c)-P.x,cz(r)-P.z)>14)cells.push([c,r]);
+    for(let i=0;i<n&&cells.length;i++){const k=Math.floor(Math.random()*cells.length),s=cells.splice(k,1)[0];new Enemy(s[0],s[1],true);}}
+  else SPAWNS.forEach(s=>new Enemy(s[0],s[1]));}
+function restart(){P.x=PS[0];P.z=PS[1];P.vx=P.vz=0;P.yaw=Math.PI;P.pitch=0;P.hp=100;P.ammo=30;P.reserve=120;P.rel=0;P.hurt=0;P.dead=false;P.kills=0;$('dead').style.display='none';waveWait=false;if(MODE==='zombie')wave=1;spawnEnemies();say(MODE==='zombie'?'ĐỢT 1':'NHIỆM VỤ BẮT ĐẦU');}
+spawnEnemies();
 
-        // Tia nắng God-rays qua lỗ hở mái
-        addGodRay(-4,15);addGodRay(6,0);addGodRay(-8,-16);
+// ================= HIỆU ỨNG CAMERA ĐEO NGỰC (shader tự viết) =================
+BABYLON.Effect.ShadersStore['bodycamFragmentShader']=`
+precision highp float;varying vec2 vUV;uniform sampler2D textureSampler;uniform float time;uniform float hurt;
+float hash(vec2 p){return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453);}
+void main(void){
+  vec2 uv=vUV,c=uv-0.5;float r2=dot(c,c);
+  vec2 u2=0.5+c*(1.0+0.62*r2+0.3*r2*r2)*0.86;
+  float ca=0.0045*(0.3+r2*6.0);
+  vec3 col=vec3(texture2D(textureSampler,u2+c*ca).r,texture2D(textureSampler,u2).g,texture2D(textureSampler,u2-c*ca).b);
+  col+=(hash(uv*vec2(1920.0,1080.0)+time*37.0)-0.5)*0.10;
+  col*=0.965+0.035*sin(uv.y*900.0+time*28.0);
+  float l=dot(col,vec3(0.299,0.587,0.114));col=mix(vec3(l),col,0.8);col=(col-0.5)*1.1+0.5;
+  col*=1.0-smoothstep(0.25,0.8,r2*2.4)*0.6;
+  col=mix(col,vec3(0.55,0.02,0.02),hurt*(0.5*smoothstep(0.05,0.55,r2*2.6)+0.12));
+  if(u2.x<0.0||u2.x>1.0||u2.y<0.0||u2.y>1.0)col=vec3(0.0);
+  gl_FragColor=vec4(col,1.0);}`;
+const pp=new BABYLON.PostProcess('bodycam','bodycam',['time','hurt'],null,1.0,cam);
+pp.onApply=e=>{e.setFloat('time',(performance.now()/1000)%1000);e.setFloat('hurt',Math.min(1,P.hurt+(P.hp<35?.18+.12*Math.sin(T*6):0)));};
 
-        // Hạt bụi bay trong nắng
-        const dGeo=new THREE.BufferGeometry(),dPos=new Float32Array(350*3);
-        for(let i=0;i<350;i++){dPos[i*3]=(Math.random()-0.5)*56;dPos[i*3+1]=0.4+Math.random()*6;dPos[i*3+2]=(Math.random()-0.5)*64;}
-        dGeo.setAttribute('position',new THREE.BufferAttribute(dPos,3));
-        dustPoints=new THREE.Points(dGeo,new THREE.PointsMaterial({color:0xfff2dc,size:0.065,transparent:true,opacity:0.45}));
-        mapGroup.add(dustPoints);
-
-        if(type==='warehouse'){
-          [-16,16].forEach(x=>{addBox(x,0,13,1.8,7.2,16,wlMat);addBox(x,0,-13,1.8,7.2,16,wlMat);addBox(x,0,0,2.2,7.2,2.2,concretePillar);});
-          addBox(-6,0,2,6,2.8,2.6,cntMat);addBox(6,0,-4,6,2.8,2.6,cntMat);
-          addBox(-23,0,0,3.2,2.8,7.5,cntMat);addBox(23,0,0,3.2,2.8,7.5,cntMat);
-          // Pallet gỗ xếp chồng & Rào chắn bê tông
-          addBox(0,0,17,3.4,1.2,2.2,wdMat);addBox(0.2,1.2,17,2.4,1.0,1.8,wdMat);
-          addBox(0,0,-17,3.4,1.2,2.2,wdMat);addBox(-9,0,-22,2.4,2.2,2.4,wdMat);addBox(9,0,22,2.4,2.2,2.4,wdMat);
-          [[-12,8],[12,-8],[-22,-16],[22,16],[4,10],[-4,-10]].forEach(([bx,bz])=>{
-            const bar=new THREE.Mesh(new THREE.CylinderGeometry(0.52,0.52,1.45,14),barrelMat);bar.position.set(bx,0.72,bz);bar.castShadow=true;bar.receiveShadow=true;mapGroup.add(bar);mapMeshes.push(bar);
-            colliders.push({minX:bx-0.58,maxX:bx+0.58,minY:0,maxY:1.45,minZ:bz-0.58,maxZ:bz+0.58});
-          });
-          addCeilingLamp(0,22,false);addCeilingLamp(0,-1,true);addCeilingLamp(-23,-15,false);addCeilingLamp(23,15,true);
-        }else{
-          [-10,10].forEach(z=>{addBox(-18,0,z,20,7.2,1.6,wlMat);addBox(18,0,z,20,7.2,1.6,wlMat);});
-          addBox(0,0,0,1.8,7.2,14,wlMat);addBox(-6,0,20,2.8,1.6,2,wdMat);addBox(6,0,-20,2.8,1.6,2,wdMat);
-          addBox(-22,0,0,3,2.5,4,cntMat);addBox(22,0,0,3,2.5,4,cntMat);
-          addCeilingLamp(-15,22,false);addCeilingLamp(15,-22,true);addCeilingLamp(0,18,false);addCeilingLamp(0,-18,false);
-        }
-      }
-
-      /* 5. SÚNG MK18 CHI TIẾT EXTRUDE + KÍNH HOLO TRONG SUỐT + ĐÈN PIN + LASER */
-      const gunPivot=new THREE.Group();camera.add(gunPivot);
-      const WEPS={rifle:{id:'rifle',auto:true,rate:0.1,mag:30,res:120,rel:1.7,hd:120,bd:55,kick:0.032},pistol:{id:'pistol',auto:false,rate:0.18,mag:15,res:60,rel:1.3,hd:100,bd:38,kick:0.022}};
-      let muzzleNode=null,gunFlashMesh=null,gunFlashLight=null,flashTimer=0;
-      const flashlight=new THREE.SpotLight(0xfff6e0,3.8,45,Math.PI/5.2,0.45,1.25);flashlight.castShadow=true;flashlight.shadow.mapSize.set(1024,1024);
-      const flashTarget=new THREE.Object3D();flashTarget.position.set(0,0,-10);gunPivot.add(flashlight,flashTarget);flashlight.target=flashTarget;
-      const laserLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,0,-10)]),new THREE.LineBasicMaterial({color:0xff1e2d,transparent:true,opacity:0.5}));scene.add(laserLine);
-      const laserDot=new THREE.Mesh(new THREE.SphereGeometry(0.032,8,8),new THREE.MeshBasicMaterial({color:0xff1e2d}));scene.add(laserDot);
-
-      function extrudePart(pts,w,m){const s=new THREE.Shape();pts.forEach((p,i)=>i===0?s.moveTo(p[0],p[1]):s.lineTo(p[0],p[1]));s.closePath();const g=new THREE.ExtrudeGeometry(s,{depth:w,bevelEnabled:true,bevelThickness:0.003,bevelSize:0.003,bevelSegments:2});g.translate(0,0,-w/2);g.rotateY(Math.PI/2);return new THREE.Mesh(g,m);}
-      function buildPlayerGun(wId){
-        while(gunPivot.children.length>2)gunPivot.remove(gunPivot.children[2]);
-        const g=new THREE.Group();
-        const mGun=new THREE.MeshStandardMaterial({color:0x1b1e23,roughness:0.28,metalness:0.78});
-        const mTan=new THREE.MeshStandardMaterial({color:0x4b4235,roughness:0.45,metalness:0.3});
-        const mGl=new THREE.MeshStandardMaterial({color:0x1e2024,roughness:0.85});
-        const box=(w,h,d,x,y,z,m,rx=0)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.rotation.x=rx;g.add(o);};
-
-        box(0.056,0.056,0.22,0.02,-0.13,0.12,mGl,0.3);box(0.05,0.05,0.22,-0.06,-0.1,-0.04,mGl,0.25);
-        if(wId==='rifle'){
-          g.add(extrudePart([[-0.06,-0.025],[0.26,-0.02],[0.27,0.035],[-0.06,0.035]],0.044,mGun));
-          g.add(extrudePart([[0.25,-0.015],[0.46,-0.01],[0.46,0.032],[0.25,0.032]],0.04,mTan)); // Ốp nòng MK18 màu Tan
-          g.add(extrudePart([[-0.03,-0.02],[-0.07,-0.12],[-0.02,-0.13],[0.01,-0.02]],0.03,mGun));
-          g.add(extrudePart([[0.12,-0.02],[0.18,-0.02],[0.21,-0.15],[0.15,-0.16]],0.032,mTan));
-          const sup=new THREE.Mesh(new THREE.CylinderGeometry(0.019,0.019,0.2,12),mGun);sup.rotation.x=Math.PI/2;sup.position.set(0,0.012,-0.56);g.add(sup);
-          // Kính EOTech Holo trong suốt có chấm đỏ
-          box(0.004,0.028,0.04,-0.018,0.054,-0.08,mGun);box(0.004,0.028,0.04,0.018,0.054,-0.08,mGun);box(0.04,0.004,0.04,0,0.068,-0.08,mGun);
-          const lens=new THREE.Mesh(new THREE.PlaneGeometry(0.032,0.024),new THREE.MeshBasicMaterial({color:0x66aacc,transparent:true,opacity:0.18,side:THREE.DoubleSide}));lens.position.set(0,0.054,-0.08);g.add(lens);
-          const rDot=new THREE.Mesh(new THREE.SphereGeometry(0.0022,6,6),new THREE.MeshBasicMaterial({color:0xff2233}));rDot.position.set(0,0.054,-0.08);g.add(rDot);
-          box(0.026,0.02,0.065,0.028,0.016,-0.38,mTan); // PEQ-15 Laser box
-          muzzleNode=new THREE.Object3D();muzzleNode.position.set(0,0.012,-0.67);g.add(muzzleNode);
-        }else{
-          g.add(extrudePart([[0.02,-0.01],[0.24,-0.005],[0.25,0.038],[0.02,0.04]],0.036,mGun));
-          g.add(extrudePart([[0.02,-0.01],[0.06,-0.01],[0.03,-0.11],[-0.02,-0.11]],0.032,mGun));
-          box(0.022,0.022,0.06,0,-0.02,-0.18,mTan);
-          muzzleNode=new THREE.Object3D();muzzleNode.position.set(0,0.018,-0.26);g.add(muzzleNode);
-        }
-        const fg=new THREE.ConeGeometry(0.055,0.16,5);fg.rotateX(-Math.PI/2);gunFlashMesh=new THREE.Mesh(fg,new THREE.MeshBasicMaterial({color:0xffbb55,transparent:true,opacity:0.9}));gunFlashMesh.position.copy(muzzleNode.position);gunFlashMesh.visible=false;g.add(gunFlashMesh);
-        gunFlashLight=new THREE.PointLight(0xffaa44,0,14);gunFlashLight.position.copy(muzzleNode.position);g.add(gunFlashLight);
-        flashlight.position.set(0.04,0.01,-0.36);gunPivot.add(g);
-      }
-
-      /* 6. KẺ ĐỊCH CHI TIẾT */
-      const enemies=[],enemyMeshes=[];
-      class Hostile{
-        constructor(id,pos){this.id=id;this.pos=pos.clone();this.vel=new THREE.Vector3();this.yaw=Math.random()*6.28;this.hp=100;this.alive=true;this.fc=0.6;this.react=0.45;this.targetPt=this.randPt();this.walkPh=Math.random()*6;this.build();}
-        build(){
-          this.g=new THREE.Group();
-          const suit=new THREE.MeshStandardMaterial({color:0x2a2d32,roughness:0.85}),vest=new THREE.MeshStandardMaterial({color:0x4a4236,roughness:0.8}),mask=new THREE.MeshStandardMaterial({color:0x17191c,roughness:0.85});
-          const add=(w,h,d,x,y,z,m,zt)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;if(zt){o.userData={enemy:this,zone:zt};enemyMeshes.push(o);}this.g.add(o);return o;};
-          this.legL=add(0.2,0.72,0.22,-0.14,0.36,0,suit,'body');this.legR=add(0.2,0.72,0.22,0.14,0.36,0,suit,'body');
-          add(0.5,0.68,0.28,0,1.07,0,vest,'body');add(0.16,0.52,0.16,0.32,1.08,-0.14,suit,'body').rotation.x=1;add(0.16,0.52,0.16,-0.32,1.08,-0.14,suit,'body').rotation.x=1;
-          add(0.07,0.08,0.52,0.22,1.12,-0.4,mask);
-          const hd=new THREE.Mesh(new THREE.SphereGeometry(0.19,12,12),mask);hd.position.set(0,1.62,0);hd.userData={enemy:this,zone:'head'};enemyMeshes.push(hd);this.g.add(hd);
-          const helm=new THREE.Mesh(new THREE.SphereGeometry(0.21,12,8,0,6.28,0,Math.PI*0.55),vest);helm.position.set(0,1.64,0);helm.userData={enemy:this,zone:'head'};enemyMeshes.push(helm);this.g.add(helm);
-          const coneGeo=new THREE.ConeGeometry(1.3,7,12,1,true);coneGeo.rotateX(Math.PI/2);coneGeo.translate(0,0,-3.6);
-          this.beamMesh=new THREE.Mesh(coneGeo,new THREE.MeshBasicMaterial({color:0xffe8b5,transparent:true,opacity:0.05,depthWrite:false,side:THREE.DoubleSide}));
-          this.beamMesh.position.set(0.22,1.12,-0.55);this.g.add(this.beamMesh);this.g.position.copy(this.pos);scene.add(this.g);
-        }
-        randPt(){return new THREE.Vector3((Math.random()-0.5)*48,0,(Math.random()-0.5)*54);}
-        hit(dmg){if(!this.alive)return;this.hp-=dmg;if(this.hp<=0){this.alive=false;this.beamMesh.visible=false;this.g.rotation.x=-Math.PI/2;this.g.position.y=0.25;sfx.radioSquelch();glitchT=0.14;checkMissionState();}}
-      }
-
-      /* 7. LOGIC CHƠI (ZERO HUD) */
-      const player={hp:100,alive:true,weapon:'rifle',weps:{rifle:{a:30,r:120},pistol:{a:15,r:60}},flashlightOn:true,laserOn:true,reloading:false,relT:0,fireT:0,vel:new THREE.Vector3(),onGround:true,lean:0,swayX:0,swayY:0,kickX:0,kickZ:0,bob:0,fsT:0,hbT:0,mDown:false};
-      const keys={};let appState='MENU',roundNum=1,curEye=1.65,lastCamYaw=0,lastCamPitch=0,glitchT=0;
-      const losRay=new THREE.Raycaster(),bulletRay=new THREE.Raycaster(),fxList=[],spkGeo=new THREE.BoxGeometry(0.05,0.05,0.05);
-
-      function collides(x,z,fy,r=0.52){for(const c of colliders)if(x+r>c.minX&&x-r<c.maxX&&z+r>c.minZ&&z-r<c.maxZ&&fy+0.3<c.maxY&&fy+1.7>c.minY)return true;return false;}
-      function movePhys(pos,vel,dx,dz,dt,r=0.52){let blk=false;if(!collides(pos.x+dx,pos.z,pos.y,r))pos.x+=dx;else blk=true;if(!collides(pos.x,pos.z+dz,pos.y,r))pos.z+=dz;else blk=true;pos.x=Math.max(-29.2,Math.min(29.2,pos.x));pos.z=Math.max(-33.2,Math.min(33.2,pos.z));vel.y-=20*dt;pos.y+=vel.y*dt;if(pos.y<=0){pos.y=0;vel.y=0;return{og:true,blk};}return{og:false,blk};}
-      function hasLoS(a,b){const d=new THREE.Vector3().subVectors(b,a),dist=d.length();if(dist<0.05)return true;losRay.set(a,d.divideScalar(dist));losRay.far=dist;return losRay.intersectObjects(mapMeshes,false).length===0;}
-      function spawnSparks(pt,col=0xffcc66,n=5){for(let i=0;i<n;i++){const m=new THREE.Mesh(spkGeo,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:1}));m.position.copy(pt);scene.add(m);fxList.push({m,v:new THREE.Vector3((Math.random()-.5)*6,Math.random()*4,(Math.random()-.5)*6),l:0.24,ml:0.24});}}
-
-      function spawnEnemies(count){enemies.forEach(e=>scene.remove(e.g));enemies.length=0;enemyMeshes.length=0;for(let i=0;i<count;i++){let px,pz,t=0;do{px=(Math.random()-0.5)*50;pz=-28+Math.random()*42;t++;}while((collides(px,pz,0,0.8)||Math.hypot(px,pz-27)<16)&&t<30);enemies.push(new Hostile(i,new THREE.Vector3(px,0,pz)));}}
-      function startGame(resetRound=true){if(resetRound)roundNum=1;buildMap(selectedMap);player.hp=100;player.alive=true;player.reloading=false;player.vel.set(0,0,0);player.weps.rifle={a:30,r:120};player.weps.pistol={a:15,r:60};switchWeapon('rifle');camera.position.set(0,1.65,27);camera.rotation.set(0,0,0);lastCamYaw=0;lastCamPitch=0;spawnEnemies(3+roundNum*2);postMat.uniforms.uHurt.value=0;appState='PLAY';document.getElementById('menu-screen').classList.add('hidden');document.getElementById('end-screen').classList.add('hidden');document.getElementById('cam-hud').classList.remove('hidden');try{controls.lock();}catch(e){}}
-      function checkMissionState(){if(enemies.filter(e=>e.alive).length===0)setTimeout(()=>{roundNum++;sfx.radioSquelch();startGame(false);},1800);}
-      function switchWeapon(id){player.weapon=id;player.reloading=false;buildPlayerGun(id);}
-      function startReload(){const spec=WEPS[player.weapon],st=player.weps[player.weapon];if(player.reloading||st.a>=spec.mag||st.r<=0)return;player.reloading=true;player.relT=spec.rel;sfx.reloadSound();}
-      function getBarrelRay(){const start=new THREE.Vector3();muzzleNode.getWorldPosition(start);const dir=new THREE.Vector3(0,0,-1).applyQuaternion(muzzleNode.getWorldQuaternion(new THREE.Quaternion())).normalize();return{start,dir};}
-
-      function shoot(){
-        if(!player.alive||player.reloading||player.fireT>0)return;const spec=WEPS[player.weapon],st=player.weps[player.weapon];
-        if(st.a<=0){player.fireT=0.25;sfx.dryFire();return;}
-        st.a--;player.fireT=spec.rate;sfx.gunshot(player.weapon==='pistol',0);
-        player.kickZ=0.065;player.kickX=0.14;camera.rotation.x=Math.min(1.45,camera.rotation.x+spec.kick);camera.rotation.y+=(Math.random()-0.5)*0.015;
-        gunFlashMesh.visible=true;gunFlashMesh.rotation.z=Math.random()*6;gunFlashLight.intensity=5;flashTimer=0.045;
-        const {start,dir}=getBarrelRay();bulletRay.set(start,dir);bulletRay.far=100;
-        const hits=bulletRay.intersectObjects([...mapMeshes,...enemyMeshes.filter(m=>m.userData.enemy.alive)],false);
-        if(hits.length){const h=hits[0];if(h.object.userData&&h.object.userData.enemy){const isH=h.object.userData.zone==='head';spawnSparks(h.point,0x991111,7);h.object.userData.enemy.hit(isH?spec.hd:spec.bd);}else spawnSparks(h.point,0xffd28a,4);}
-      }
-      function damagePlayer(dmg){
-        if(!player.alive)return;player.hp-=dmg;glitchT=0.18;camera.rotation.z+=(Math.random()-0.5)*0.15;
-        postMat.uniforms.uHurt.value=Math.min(1,(100-player.hp)/100);
-        if(player.hp<=0){player.hp=0;player.alive=false;appState='DEAD';if(controls.isLocked)controls.unlock();document.getElementById('cam-hud').classList.add('hidden');document.getElementById('end-screen').classList.remove('hidden');document.getElementById('end-sub').textContent=`OFFICER DOWN AT SECTOR ${roundNum} — FOOTAGE ARCHIVED`;}
-      }
-
-      function updatePlayer(dt){
-        player.fireT=Math.max(0,player.fireT-dt);if(player.hp>0&&player.hp<55){player.hbT-=dt;if(player.hbT<=0){sfx.heartbeat();player.hbT=0.72;}}
-        if(player.reloading){player.relT-=dt;if(player.relT<=0){const sp=WEPS[player.weapon],st=player.weps[player.weapon],tr=Math.min(sp.mag-st.a,st.r);st.a+=tr;st.r-=tr;player.reloading=false;}}
-        if(player.mDown&&WEPS[player.weapon].auto&&controls.isLocked)shoot();
-        const crouch=!!(keys['ControlLeft']||keys['ControlRight']||keys['KeyC']),sprint=!!(keys['ShiftLeft']||keys['ShiftRight'])&&!crouch&&!keys['MouseRight'],leanTarget=(keys['KeyQ']?1:0)-(keys['KeyE']?1:0);
-        player.lean+=(leanTarget-player.lean)*Math.min(1,dt*12);curEye+=((crouch?1.0:1.65)-curEye)*Math.min(1,dt*12);
-        const fw=new THREE.Vector3(0,0,-1).applyAxisAngle(new THREE.Vector3(0,1,0),camera.rotation.y),rg=new THREE.Vector3(1,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),camera.rotation.y);
-        const md=new THREE.Vector3().addScaledVector(fw,(keys['KeyW']?1:0)-(keys['KeyS']?1:0)).addScaledVector(rg,(keys['KeyD']?1:0)-(keys['KeyA']?1:0));if(md.lengthSq())md.normalize();
-        const spd=crouch?2.8:sprint?6.8:4.5;player.vel.x=md.x*spd;player.vel.z=md.z*spd;if(keys['Space']&&player.onGround){player.vel.y=6.8;player.onGround=false;}
-        const feet=new THREE.Vector3(camera.position.x,camera.position.y-curEye,camera.position.z);player.onGround=movePhys(feet,player.vel,player.vel.x*dt,player.vel.z*dt,dt).og;
-        const leanX=-player.lean*0.42;if(!collides(feet.x+rg.x*leanX,feet.z+rg.z*leanX,feet.y,0.3))camera.position.set(feet.x+rg.x*leanX,feet.y+curEye,feet.z+rg.z*leanX);else camera.position.set(feet.x,feet.y+curEye,feet.z);
-        const hSpd=Math.hypot(player.vel.x,player.vel.z);if(hSpd>0.5&&player.onGround){player.bob+=dt*(sprint?12:8);player.fsT-=dt;if(player.fsT<=0){sfx.tone(80,35,0.06,'sine',0.06);player.fsT=sprint?0.34:0.48;}}else player.bob+=dt*1.5;
-        const targetRoll=player.lean*0.16+(hSpd>0.5?Math.sin(player.bob*0.5)*0.018:0);camera.rotation.z+=(targetRoll-camera.rotation.z)*Math.min(1,dt*10);
-        const dYaw=camera.rotation.y-lastCamYaw,dPitch=camera.rotation.x-lastCamPitch;lastCamYaw=camera.rotation.y;lastCamPitch=camera.rotation.x;
-        player.swayX=THREE.MathUtils.clamp(player.swayX-dYaw*0.35,-0.09,0.09)*Math.pow(0.01,dt);player.swayY=THREE.MathUtils.clamp(player.swayY-dPitch*0.35,-0.08,0.08)*Math.pow(0.01,dt);
-        player.kickZ*=Math.pow(0.001,dt);player.kickX*=Math.pow(0.001,dt);if(flashTimer>0){flashTimer-=dt;if(flashTimer<=0){gunFlashMesh.visible=false;gunFlashLight.intensity=0;}}
-        const ads=!!keys['MouseRight']&&!player.reloading,bx=hSpd>0.5?Math.cos(player.bob*0.5)*0.012:Math.cos(player.bob)*0.002,by=hSpd>0.5?Math.abs(Math.sin(player.bob))*0.016:Math.sin(player.bob)*0.002;
-        gunPivot.position.x+=((ads?0.025:0.2)+bx-gunPivot.position.x)*Math.min(1,dt*14);gunPivot.position.y+=((ads?-0.055:-0.17)-by-gunPivot.position.y)*Math.min(1,dt*14);gunPivot.position.z+=((ads?-0.26:-0.35)+player.kickZ-gunPivot.position.z)*Math.min(1,dt*14);
-        gunPivot.rotation.set((player.reloading?-0.55:player.kickX)+player.swayY,player.swayX,player.lean*0.15);
-        flashlight.intensity=player.flashlightOn?3.8:0;laserLine.visible=player.laserOn&&!player.reloading;laserDot.visible=false;
-        if(laserLine.visible&&muzzleNode){const {start,dir}=getBarrelRay();losRay.set(start,dir);losRay.far=65;const hits=losRay.intersectObjects([...mapMeshes,...enemyMeshes.filter(m=>m.userData.enemy.alive)],false);const endPt=hits.length?hits[0].point.clone().addScaledVector(dir,-0.02):start.clone().addScaledVector(dir,55);laserLine.geometry.setFromPoints([start,endPt]);if(hits.length){laserDot.position.copy(endPt);laserDot.visible=true;}}
-      }
-
-      function updateEnemies(dt){
-        for(const en of enemies){
-          if(!en.alive)continue;en.fc=Math.max(0,en.fc-dt);const eye=new THREE.Vector3(en.pos.x,en.pos.y+1.55,en.pos.z),dist=eye.distanceTo(camera.position);
-          if(player.alive&&dist<36&&hasLoS(eye,camera.position)){
-            en.react=Math.max(0,en.react-dt);const dx=camera.position.x-en.pos.x,dz=camera.position.z-en.pos.z,dYaw=Math.atan2(-dx,-dz);let df=dYaw-en.yaw;while(df>Math.PI)df-=6.283;while(df<-Math.PI)df+=6.283;en.yaw+=df*Math.min(1,dt*7);en.legL.rotation.x=en.legR.rotation.x=0;
-            if(en.react<=0&&en.fc<=0&&Math.abs(df)<0.3){sfx.gunshot(false,dist);en.fc=0.38+Math.random()*0.4;const sd=new THREE.Vector3().subVectors(camera.position,eye).normalize();sd.x+=(Math.random()-0.5)*0.14;sd.y+=(Math.random()-0.5)*0.14;sd.z+=(Math.random()-0.5)*0.14;const ray=new THREE.Ray(eye,sd.normalize()),cp=new THREE.Vector3();ray.closestPointToPoint(camera.position,cp);if(cp.distanceTo(camera.position)<0.36)damagePlayer(34);}
-          }else{
-            en.react=0.48;if(en.pos.distanceTo(en.targetPt)<1.8)en.targetPt=en.randPt();const dx=en.targetPt.x-en.pos.x,dz=en.targetPt.z-en.pos.z,d=Math.hypot(dx,dz)||1,res=movePhys(en.pos,en.vel,(dx/d)*2.5*dt,(dz/d)*2.5*dt,dt);
-            if(res.blk)en.targetPt=en.randPt();const dYaw=Math.atan2(-dx,-dz);let df=dYaw-en.yaw;while(df>Math.PI)df-=6.283;while(df<-Math.PI)df+=6.283;en.yaw+=df*Math.min(1,dt*4);en.walkPh+=dt*5;en.legL.rotation.x=Math.sin(en.walkPh)*0.4;en.legR.rotation.x=-Math.sin(en.walkPh)*0.4;
-          }
-          en.g.position.copy(en.pos);en.g.rotation.y=en.yaw;
-        }
-      }
-
-      /* 8. EVENTS & LOOP */
-      document.querySelectorAll('.map-btn[data-map]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.map-btn[data-map]').forEach(x=>x.classList.remove('active'));b.classList.add('active');selectedMap=b.dataset.map;});
-      document.getElementById('btn-play').onclick=()=>{sfx.init();sfx.radioSquelch();startGame(true);};
-      document.getElementById('btn-retry').onclick=()=>{sfx.radioSquelch();startGame(true);};
-      document.getElementById('btn-resume').onclick=()=>{appState='PLAY';try{controls.lock();}catch(e){}};
-      const goMenu=()=>{appState='MENU';['pause-screen','end-screen','cam-hud'].forEach(id=>document.getElementById(id).classList.add('hidden'));document.getElementById('menu-screen').classList.remove('hidden');};
-      document.getElementById('btn-menu').onclick=goMenu;document.getElementById('btn-end-menu').onclick=goMenu;
-      controls.addEventListener('lock',()=>{if(appState==='PAUSE')appState='PLAY';document.getElementById('pause-screen').classList.add('hidden');});
-      controls.addEventListener('unlock',()=>{for(const k in keys)keys[k]=false;player.mDown=false;if(appState==='PLAY'){appState='PAUSE';document.getElementById('pause-screen').classList.remove('hidden');}});
-      window.addEventListener('keydown',e=>{keys[e.code]=true;if(appState!=='PLAY')return;if(e.code==='KeyF'){player.flashlightOn=!player.flashlightOn;sfx.tone(700,900,0.04);}else if(e.code==='KeyL'){player.laserOn=!player.laserOn;sfx.tone(800,1000,0.04);}else if(e.code==='KeyR')startReload();else if(e.code==='Digit1')switchWeapon('rifle');else if(e.code==='Digit2')switchWeapon('pistol');if(e.ctrlKey&&e.code==='KeyW')e.preventDefault();});
-      window.addEventListener('keyup',e=>{keys[e.code]=false;});
-      window.addEventListener('mousedown',e=>{if(appState!=='PLAY'||!controls.isLocked)return;if(e.button===0){player.mDown=true;shoot();}else if(e.button===2)keys['MouseRight']=true;});
-      window.addEventListener('mouseup',e=>{if(e.button===0)player.mDown=false;if(e.button===2)keys['MouseRight']=false;});
-      window.addEventListener('contextmenu',e=>e.preventDefault());
-      window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);rt.setSize(Math.floor(innerWidth*pr),Math.floor(innerHeight*pr));});
-
-      const clock=new THREE.Clock();let totalT=0,clkT=0;
-      function animate(){
-        requestAnimationFrame(animate);
-        const dt=Math.min(clock.getDelta(),0.05);totalT+=dt;clkT+=dt;
-        if(clkT>0.2){clkT=0;document.getElementById('hud-clock').textContent=new Date().toISOString().slice(0,19).replace('T',' ');}
-        if(glitchT>0){glitchT=Math.max(0,glitchT-dt);postMat.uniforms.uGlitch.value=glitchT>0?1:0;}
-        postMat.uniforms.uTime.value=totalT;
-
-        for(const fl of flickerLights){const on=Math.sin(totalT*18+fl.phase)*Math.sin(totalT*7.3)>-0.4;fl.light.intensity=on?1.3:0.2;fl.fixture.material.color.setHex(on?0xe8f2ff:0x3b424d);}
-        if(dustPoints){const arr=dustPoints.geometry.attributes.position.array;for(let i=1;i<arr.length;i+=3){arr[i]-=0.12*dt;if(arr[i]<0.3)arr[i]=6.2;}dustPoints.geometry.attributes.position.needsUpdate=true;}
-
-        if(appState==='MENU'){camera.position.set(Math.sin(totalT*0.2)*18,4.2,Math.cos(totalT*0.2)*18);camera.lookAt(0,1.2,0);}
-        else if(appState==='PLAY'){
-          updatePlayer(dt);updateEnemies(dt);
-          for(let i=fxList.length-1;i>=0;i--){const f=fxList[i];f.l-=dt;if(f.l<=0){scene.remove(f.m);f.m.material.dispose();fxList.splice(i,1);}else{f.v.y-=14*dt;f.m.position.addScaledVector(f.v,dt);f.m.material.opacity=f.l/f.ml;}}
-        }
-        // Render thế giới 3D vào RenderTarget -> Chạy qua Shader Fisheye Bodycam ra màn hình!
-        renderer.setRenderTarget(rt);renderer.render(scene,camera);
-        renderer.setRenderTarget(null);renderer.render(postScene,postCam);
-      }
-      buildMap('warehouse');buildPlayerGun('rifle');animate();
-    })();
-  </script>
-</body>
-</html>
+// ================= VÒNG LẶP =================
+const t0=performance.now();let hudT=0;
+scene.onBeforeRenderObservable.add(()=>{
+  const dt=Math.min(engine.getDeltaTime()/1000,.05);
+  if(!locked)return;T+=dt;
+  P.hurt=Math.max(0,P.hurt-dt*1.1);P.shake*=Math.pow(.02,dt);
+  flick-=dt;if(flick<=0){flick=.07;panels.forEach((p,i)=>{p.setEnabled(!(i%7===0&&Math.random()<.25));});}
+  const fwd=(keys.KeyW?1:0)-(keys.KeyS?1:0),str=(keys.KeyD?1:0)-(keys.KeyA?1:0),ads=mouse[2]&&!P.dead,spr=keys.ShiftLeft&&fwd>0&&!ads&&P.rel<=0&&!P.dead;
+  const spd=spr?4.6:(ads?1.7:2.9),fx=Math.sin(P.yaw),fz=Math.cos(P.yaw),rx=Math.cos(P.yaw),rz=-Math.sin(P.yaw);
+  let wx=fx*fwd+rx*str,wz=fz*fwd+rz*str;const wl=Math.hypot(wx,wz);if(wl>0){wx/=wl;wz/=wl;}
+  if(P.dead){wx=wz=0;}
+  const k=Math.min(1,(wl>0?9:7)*dt);P.vx+=(wx*spd-P.vx)*k;P.vz+=(wz*spd-P.vz)*k;
+  const nx=P.x+P.vx*dt,nz=P.z+P.vz*dt;if(!blocked(nx,P.z,.32))P.x=nx;else P.vx=0;if(!blocked(P.x,nz,.32))P.z=nz;else P.vz=0;
+  const sp=Math.hypot(P.vx,P.vz);P.phase+=sp*dt*1.9;const mag=Math.min(sp/3,1.4)*(spr?1.5:1);
+  const sgn=Math.sin(P.phase)>0;if(sp>.8&&sgn!==P.stepS){P.stepS=sgn;sfx('step',.8);}
+  // bắn / nạp đạn
+  P.cd-=dt;if(P.rel>0){P.rel-=dt;if(P.rel<=0){const n=Math.min(30-P.ammo,P.reserve);P.ammo+=n;P.reserve-=n;}}
+  if(mouse[0]&&!P.dead&&!spr&&P.rel<=0&&P.cd<=0){if(P.ammo>0)fire();else{P.cd=.3;sfx('click',1);}}
+  const rr=Math.min(P.rec,dt*.5);P.pitch+=rr;P.rec-=rr;
+  // camera: lắc theo nhịp bước + thở + giật
+  const shx=(Math.random()-.5)*P.shake*.04,shy=(Math.random()-.5)*P.shake*.04,bobY=Math.sin(P.phase*2)*.04*mag+Math.sin(T*1.4)*.006,bobX=Math.sin(P.phase)*.025*mag;
+  const dead=P.dead?(P.deadT+=dt,Math.min(P.deadT/.6,1)):0;
+  cam.position.set(P.x+rx*bobX,1.55+bobY-dead*1.15,P.z+rz*bobX);
+  cam.rotation.set(P.pitch+Math.sin(P.phase*2+1)*.008*mag+shy,P.yaw,Math.sin(P.phase)*.018*mag+shx+dead*1.2);
+  cam.fov+=((ads?.95:(spr?1.32:1.25))-cam.fov)*Math.min(1,dt*10);
+  // súng
+  P.kick*=Math.pow(.0005,dt);P.kickR*=Math.pow(.0005,dt);const rp=P.rel>0?Math.sin(Math.PI*(1-P.rel/P.relT)):0;
+  const tp=ads?[0,-.118,.3]:(spr?[.12,-.28,.28]:[.17,-.2,.35]),g=Math.min(1,dt*14);
+  gun.position.x+=(tp[0]+Math.sin(P.phase)*.006*mag-gun.position.x)*g;gun.position.y+=(tp[1]-rp*.2+Math.abs(Math.sin(P.phase))*.008*mag-gun.position.y)*g;gun.position.z+=(tp[2]-P.kick-gun.position.z)*g;
+  gun.rotation.x+=(((spr?.5:0)-P.kickR+rp*.5)-gun.rotation.x)*Math.min(1,dt*10);gun.rotation.y*=Math.pow(.01,dt);gun.rotation.z+=(((spr?-.35:0)+rp*.4)-gun.rotation.z)*Math.min(1,dt*10);
+  // kẻ địch + tia lửa
+  enemies.forEach(e=>e.update(dt));if(MODE==='zombie'&&!P.dead&&!waveWait&&enemies.length&&enemies.every(e=>e.dead)){waveWait=true;say('ĐỢT '+(wave+1)+' ĐANG TỚI...',3000);setTimeout(()=>{if(MODE==='zombie'&&!P.dead){wave++;P.reserve=Math.min(240,P.reserve+60);P.hp=Math.min(100,P.hp+25);spawnEnemies();say('ĐỢT '+wave);}waveWait=false;},3200);}spark.forEach(s=>{if(s.t>0){s.t-=dt;if(s.t<=0)s.m.setEnabled(false);}});
+  // HUD
+  hudT-=dt;if(hudT<=0){hudT=.25;const el=((performance.now()-t0)/1000)|0,pad=n=>String(n).padStart(2,'0'),d=new Date();
+    $('elapsed').textContent=pad(el/3600|0)+':'+pad(el/60%60|0)+':'+pad(el%60);
+    $('time').textContent=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'  '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+    $('kills').textContent=(MODE==='zombie'?'ĐỢT '+wave+'  ·  HẠ '+P.kills:'MỤC TIÊU '+P.kills+'/'+enemies.length)+'   ·   SINH TỒN '+P.hp;
+    $('ammo').textContent=P.rel>0?'NẠP ĐẠN...':pad(P.ammo)+' / '+String(P.reserve).padStart(3,'0');}
+});
+$('tolobby').onclick=e=>{e.stopPropagation();onExit();};
+return{scene,begin(mode){MODE=mode;wave=0;waveWait=false;$('stitle').textContent=mode==='zombie'?'ZOMBIE SIEGE':'FIELD OPS';restart();}};
+}
+function main(){
+if(!BABYLON.Engine.isSupported()){showErr('WebGL không khả dụng ở đây. Hãy mở bằng link thật hoặc Live Server trên Chrome/Edge.');return;}
+const Q=new URLSearchParams(location.search),LOW=Q.get('q')==='low'||matchMedia('(pointer:coarse)').matches;
+const canvas=document.getElementById('c'),engine=new BABYLON.Engine(canvas,true,{stencil:false});
+if(LOW)engine.setHardwareScalingLevel(1.6);
+let game=null,active=null;
+const lobby=buildLobby(engine,LOW,mode=>{try{if(!game)game=buildGame(engine,canvas,exit);lobby.hide();document.body.classList.remove('lobby');game.begin(mode);active=game.scene;}catch(e){showErr(e);}});
+function exit(){if(document.pointerLockElement)document.exitPointerLock();document.body.classList.add('lobby');lobby.show();active=lobby.scene;}
+active=lobby.scene;engine.runRenderLoop(()=>active.render());addEventListener('resize',()=>engine.resize());
+}
+loadJS(['https://cdn.jsdelivr.net/npm/babylonjs@9.37.2/babylon.js','https://unpkg.com/babylonjs@9.37.2/babylon.js','https://cdn.babylonjs.com/babylon.js'],
+  ()=>{try{main();}catch(e){showErr(e);}},
+  ()=>{document.getElementById('start').innerHTML='<div style="font-size:22px">KHÔNG TẢI ĐƯỢC BABYLON.JS</div><small>Mở file bằng link thật (Vercel) hoặc Live Server và kiểm tra mạng.</small>';});
+</script></body></html>
